@@ -30,6 +30,8 @@ import {
   Settings,
   LogOut,
   KeyRound,
+  Network,
+  MoreHorizontal,
   Landmark as Logo,
   Menu,
   ChevronRight,
@@ -54,24 +56,26 @@ interface NavItem {
   label: string;
   icon: any;
   adminOnly?: boolean;
+  short?: string; // libellé court pour la barre mobile
 }
 
 const ADMIN_NAV: NavItem[] = [
-  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { id: "members", label: "Membres", icon: Users },
-  { id: "contributions", label: "Cotisations", icon: Wallet },
-  { id: "treasury", label: "Trésorerie", icon: Landmark },
-  { id: "projects", label: "Projets", icon: FolderKanban },
-  { id: "announcements", label: "Annonces", icon: Megaphone },
-  { id: "reports", label: "Rapports & Exports", icon: FileBarChart },
-  { id: "audit", label: "Journal d'audit", icon: ScrollText, adminOnly: true },
+  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, short: "Accueil" },
+  { id: "registries", label: "Registres", icon: Network, short: "Registres" },
+  { id: "members", label: "Membres", icon: Users, short: "Membres" },
+  { id: "contributions", label: "Cotisations", icon: Wallet, short: "Cotisations" },
+  { id: "treasury", label: "Trésorerie", icon: Landmark, short: "Trésorerie" },
+  { id: "projects", label: "Projets", icon: FolderKanban, short: "Projets" },
+  { id: "announcements", label: "Annonces", icon: Megaphone, short: "Annonces" },
+  { id: "reports", label: "Rapports & Exports", icon: FileBarChart, short: "Rapports" },
+  { id: "audit", label: "Journal d'audit", icon: ScrollText, adminOnly: true, short: "Audit" },
 ];
 
 const MEMBER_NAV: NavItem[] = [
-  { id: "dashboard", label: "Mon tableau de bord", icon: LayoutDashboard },
-  { id: "my-contributions", label: "Mes cotisations", icon: Wallet },
-  { id: "my-projects", label: "Mes projets", icon: FolderKanban },
-  { id: "announcements", label: "Annonces", icon: Megaphone },
+  { id: "dashboard", label: "Mon tableau de bord", icon: LayoutDashboard, short: "Accueil" },
+  { id: "my-contributions", label: "Mes cotisations", icon: Wallet, short: "Cotisations" },
+  { id: "my-projects", label: "Mes projets", icon: FolderKanban, short: "Projets" },
+  { id: "announcements", label: "Annonces", icon: Megaphone, short: "Annonces" },
 ];
 
 const ADMIN_ROLES = ["SUPER_ADMIN", "HEAD", "TREASURER"];
@@ -94,6 +98,11 @@ export function AppShell({
   const isAdmin = ADMIN_ROLES.includes(member.role);
   const nav = isAdmin ? ADMIN_NAV : MEMBER_NAV;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Barre mobile : 4 entrées principales + 5e cellule (menu « Plus » admin / Profil membre)
+  const primaryNav = nav.slice(0, 4);
+  const moreNav = nav.slice(4);
+  const moreActive = moreNav.some((i) => i.id === view) || (!isAdmin && view === "profile");
 
   const logout = async () => {
     try {
@@ -252,7 +261,7 @@ export function AppShell({
       {/* ---------- Nav bas mobile ---------- */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
         <div className="grid grid-cols-5 h-16">
-          {nav.slice(0, 5).map((item) => {
+          {primaryNav.map((item) => {
             const active = view === item.id;
             return (
               <button
@@ -265,7 +274,7 @@ export function AppShell({
               >
                 {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />}
                 <item.icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium leading-none">{item.label.split(" ").slice(-1)[0]}</span>
+                <span className="text-[10px] font-medium leading-none">{item.short ?? item.label}</span>
                 {item.id === "contributions" && pendingBadge && pendingBadge > 0 && isAdmin && (
                   <span className="absolute top-2 right-[22%] rounded-full bg-amber-500 text-white text-[9px] font-bold px-1 min-w-4 h-4 flex items-center justify-center">
                     {pendingBadge}
@@ -274,6 +283,44 @@ export function AppShell({
               </button>
             );
           })}
+
+          {/* 5e cellule : menu « Plus » (admin) ou Profil (membre) */}
+          {isAdmin ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1 relative outline-none",
+                    moreActive ? "text-primary" : "text-muted-foreground"
+                  )}
+                  aria-label="Plus de vues"
+                >
+                  {moreActive && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />}
+                  <MoreHorizontal className="w-5 h-5" />
+                  <span className="text-[10px] font-medium leading-none">Plus</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="w-56 mb-2">
+                {moreNav.map((item) => (
+                  <DropdownMenuItem key={item.id} onClick={() => onNavigate(item.id)}>
+                    <item.icon className="w-4 h-4 mr-2" /> {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              onClick={() => onNavigate("profile")}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 relative",
+                view === "profile" ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              {view === "profile" && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />}
+              <KeyRound className="w-5 h-5" />
+              <span className="text-[10px] font-medium leading-none">Profil</span>
+            </button>
+          )}
         </div>
       </nav>
     </div>

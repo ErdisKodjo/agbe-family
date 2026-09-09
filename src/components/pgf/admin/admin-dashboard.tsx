@@ -32,6 +32,7 @@ import {
   LayoutDashboard,
   AlertTriangle,
   History,
+  Network,
 } from "lucide-react";
 import { formatMoney, formatMoneyShort, formatDateTime, monthLabel } from "@/lib/format";
 import { AUDIT_ACTION_LABELS } from "@/lib/constants";
@@ -62,6 +63,9 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (v: any) => void })
         description="Vue d'ensemble de la famille : membres, finances et projets."
         actions={
           <>
+            <Button variant="outline" size="sm" onClick={() => onNavigate("registries")}>
+              <Network className="w-4 h-4 mr-1.5" /> {k.registriesCount} registre{k.registriesCount > 1 ? "s" : ""}
+            </Button>
             <Button variant="outline" size="sm" onClick={() => onNavigate("contributions")}>
               <Clock className="w-4 h-4 mr-1.5" /> {k.pendingPayments} paiement(s) à valider
             </Button>

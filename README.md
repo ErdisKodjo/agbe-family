@@ -142,7 +142,7 @@ bun run dev           # http://localhost:3000
 │   └── components/pgf/
 │       ├── login-screen.tsx      # écran de connexion premium
 │       ├── app-shell.tsx         # coque (sidebar + nav mobile)
-│       ├── admin/                # 8 vues administrateur
+│       ├── admin/                # 9 vues administrateur
 │       ├── member/               # 4 vues espace membre
 │       └── shared/               # composants partagés
 └── public/manifest.json          # PWA
