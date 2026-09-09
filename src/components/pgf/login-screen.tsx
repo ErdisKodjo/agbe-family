@@ -3,6 +3,7 @@
 // PGF — Écran de connexion (téléphone international + mot de passe)
 // ============================================================
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,14 +39,29 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
       {/* ---- Panneau de marque ---- */}
       <div className="pgf-brand-gradient relative hidden lg:flex flex-col justify-between p-12 text-white overflow-hidden">
         <div className="pgf-dots absolute inset-0 opacity-60" />
+        {/* Filigrane décoratif (emblème géant) */}
+        <Image
+          src="/logo-512.webp"
+          alt=""
+          width={460}
+          height={460}
+          aria-hidden
+          className="absolute -right-24 top-1/2 -translate-y-1/2 opacity-[0.15] pointer-events-none select-none"
+        />
         <div className="relative">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-white/10 backdrop-blur p-2.5 border border-white/15">
-              <Landmark className="w-6 h-6 text-amber-300" />
-            </div>
+          <div className="flex items-center gap-4">
+            <Image
+              src="/logo-512.webp"
+              alt="Emblème AGBETOSSOU : arbre de vie entre deux mains, famille bénie de rayons de lumière"
+              width={84}
+              height={84}
+              priority
+              className="rounded-2xl ring-1 ring-white/25 shadow-[0_10px_36px_rgba(0,0,0,0.45)] shrink-0"
+            />
             <div>
-              <p className="font-bold text-lg tracking-tight">AGBE Family</p>
+              <p className="font-bold text-xl tracking-tight">AGBE Family</p>
               <p className="text-xs text-white/60">Plateforme de Gestion Familiale</p>
+              <p className="text-[11px] text-amber-300/90 tracking-wide mt-1">AGBE TƆ SƆ · La vie appartient à Dieu</p>
             </div>
           </div>
         </div>
@@ -83,9 +99,14 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
       <div className="pgf-bg flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="rounded-xl bg-primary p-2.5">
-              <Landmark className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <Image
+              src="/logo-128.webp"
+              alt="Emblème AGBE Family"
+              width={52}
+              height={52}
+              priority
+              className="rounded-xl ring-1 ring-border shrink-0"
+            />
             <div>
               <p className="font-bold tracking-tight">AGBE Family</p>
               <p className="text-xs text-muted-foreground">Plateforme de Gestion Familiale</p>

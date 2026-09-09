@@ -91,6 +91,11 @@ Réalisé conformément au **Cahier des Charges PGF v1.0**.
 Palette **« Émeraude & Or »** : prospérité, famille, croissance — barre latérale
 « forêt profonde », accents dorés, typographie Geist. Thème clair, UI bilingue FR.
 
+Emblème **AGBETOSSOU** (logo provisoire) : sceau circulaire sur cuir vert profond —
+l'arbre de vie encadré de deux mains protectrices, la famille bénie de rayons de
+lumière, devise « **AGBE TƆ SƆ · La vie appartient à Dieu** ». Décliné en favicon,
+icônes PWA (manifest) et écrans d'authentification.
+
 ## 📸 Aperçu de l'application
 
 **Connexion & Tableau de bord administrateur**

@@ -3,6 +3,7 @@
 // PGF — Coque applicative (barre latérale desktop + nav mobile)
 // ============================================================
 import { useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -32,7 +33,6 @@ import {
   KeyRound,
   Network,
   MoreHorizontal,
-  Landmark as Logo,
   Menu,
   ChevronRight,
 } from "lucide-react";
@@ -119,9 +119,14 @@ export function AppShell({
         {/* ---------- Sidebar desktop ---------- */}
         <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground sticky top-0 h-screen">
           <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border/60">
-            <div className="rounded-xl bg-sidebar-primary p-2">
-              <Logo className="w-5 h-5 text-sidebar-primary-foreground" />
-            </div>
+            <Image
+              src="/logo-128.webp"
+              alt="Emblème AGBE Family"
+              width={40}
+              height={40}
+              priority
+              className="rounded-lg ring-1 ring-sidebar-primary/70 shadow-md shrink-0"
+            />
             <div className="min-w-0">
               <p className="font-bold text-[15px] tracking-tight text-white">AGBE Family</p>
               <p className="text-[11px] text-sidebar-foreground/60">Gestion Familiale · PGF</p>
@@ -205,9 +210,14 @@ export function AppShell({
           {/* En-tête mobile */}
           <header className="lg:hidden sticky top-0 z-40 bg-sidebar text-white border-b border-sidebar-border/50">
             <div className="flex items-center gap-3 px-4 h-14">
-              <div className="rounded-lg bg-sidebar-primary p-1.5">
-                <Logo className="w-4 h-4 text-sidebar-primary-foreground" />
-              </div>
+              <Image
+                src="/logo-128.webp"
+                alt="Emblème AGBE Family"
+                width={30}
+                height={30}
+                priority
+                className="rounded-md shrink-0"
+              />
               <p className="font-bold text-sm">AGBE Family</p>
               <div className="flex-1" />
               <DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
