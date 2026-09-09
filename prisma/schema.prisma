@@ -1,0 +1,311 @@
+// ============================================================
+// PGF — Plateforme de Gestion Familiale
+// Modèle de données professionnel (cahier des charges v1.0)
+// SQLite + Prisma — les énumérations sont gérées au niveau
+// applicatif (contraintes SQLite), via src/lib/constants.ts
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// SESSIONS (authentification par jeton httpOnly)
+// ------------------------------------------------------------
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+}
+
+// ------------------------------------------------------------
+// REGISTRES (groupes familiaux : branches, comités…)
+// Le « Registre Global » est une vue virtuelle agrégée :
+// isGlobal = true sur un seul enregistrement de référence.
+// ------------------------------------------------------------
+model Registry {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  isGlobal     Boolean  @default(false)
+  transparency Boolean  @default(false) // « Transparence Totale »
+  headMemberId String?  // « Tête de liste » (admin du registre)
+  headMember   Member?  @relation("RegistryHead", fields: [headMemberId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  members       Member[]  @relation("RegistryMembers")
+  campaigns     ContributionCampaign[]
+  transactions  Transaction[]
+  projects      Project[]
+  announcements Announcement[]
+
+  @@index([headMemberId])
+}
+
+// ------------------------------------------------------------
+// MEMBRES (fiche membre + identifiants de connexion)
+// Identifiant = numéro de téléphone (format international)
+// ------------------------------------------------------------
+model Member {
+  id                 String    @id @default(cuid())
+  registryId         String
+  registry           Registry  @relation("RegistryMembers", fields: [registryId], references: [id], onDelete: Cascade)
+  firstName          String
+  lastName           String
+  phone              String    @unique
+  city               String?
+  role               String    @default("MEMBER") // SUPER_ADMIN | HEAD | TREASURER | MEMBER
+  passwordHash       String
+  mustChangePassword Boolean   @default(true)
+  isActive           Boolean   @default(true)
+  position           String?   // position dans la famille (aîné, cadet…)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  headedRegistries   Registry[]               @relation("RegistryHead")
+  sessions           Session[]
+  pledges            ContributionPledge[]
+  payments           Payment[]
+  paymentsValidated  Payment[]                @relation("PaymentValidator")
+  transactionsRecorded Transaction[]           @relation("TransactionRecorder")
+  tasksAssigned      ProjectTask[]            @relation("TaskAssignee")
+  projectContributions ProjectContribution[]
+  announcements      Announcement[]
+  auditLogs          AuditLog[]
+
+  @@index([registryId])
+  @@index([role])
+}
+
+// ------------------------------------------------------------
+// CAMPAGNES DE COTISATION
+// type = MONTHLY (récurrente) | OCCASIONAL (appel à fonds)
+// Option A : montant unique — Option B : allowCustom + paliers
+// ------------------------------------------------------------
+model ContributionCampaign {
+  id           String    @id @default(cuid())
+  registryId   String
+  registry     Registry  @relation(fields: [registryId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  type         String    @default("MONTHLY") // MONTHLY | OCCASIONAL
+  amount       Float     @default(0) // montant unique (mensuel / option A)
+  dueDay       Int       @default(5) // date butoire (mensuel)
+  periodMonth  Int? // 1-12 (mensuel)
+  periodYear   Int? // ex: 2026
+  targetAmount Float     @default(0) // objectif global (occasionnel)
+  allowCustom  Boolean   @default(false) // option B : montants personnalisés
+  startDate    DateTime?
+  endDate      DateTime?
+  status       String    @default("ACTIVE") // ACTIVE | CLOSED
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  pledges ContributionPledge[]
+  payments Payment[]
+
+  @@index([registryId])
+  @@index([status])
+}
+
+// ------------------------------------------------------------
+// ENGAGEMENTS (dû par membre pour une campagne)
+// Mensuel : plein pour tous ; Occasionnel : montants paliers
+// ------------------------------------------------------------
+model ContributionPledge {
+  id         String                @id @default(cuid())
+  campaignId String
+  campaign   ContributionCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  memberId   String
+  member     Member                @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amountDue  Float                 @default(0)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  @@unique([campaignId, memberId])
+  @@index([memberId])
+}
+
+// ------------------------------------------------------------
+// PAIEMENTS (cotisations versées + preuve de paiement)
+// ------------------------------------------------------------
+model Payment {
+  id            String    @id @default(cuid())
+  campaignId    String?
+  campaign      ContributionCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  memberId      String
+  member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount        Float
+  method        String    @default("MOBILE_MONEY") // MOBILE_MONEY | CASH | BANK | OTHER
+  reference     String? // n° transaction mobile money
+  proofUrl      String? // pièce justificative (photo/ reçu)
+  note          String?
+  status        String    @default("PENDING") // PENDING | VALIDATED | REJECTED
+  paidAt        DateTime  @default(now())
+  validatedAt   DateTime?
+  validatedById String?
+  validatedBy   Member?   @relation("PaymentValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([campaignId])
+  @@index([memberId])
+  @@index([status])
+}
+
+// ------------------------------------------------------------
+// TRÉSORERIE — Journal de caisse
+// type = INCOME (recettes) | EXPENSE (dépenses)
+// ------------------------------------------------------------
+model Transaction {
+  id            String    @id @default(cuid())
+  registryId    String
+  registry      Registry  @relation(fields: [registryId], references: [id], onDelete: Cascade)
+  type          String // INCOME | EXPENSE
+  date          DateTime  @default(now())
+  label         String // Libellé
+  category      String // voir INCOME/EXPENSE_CATEGORIES
+  amount        Float
+  attachmentUrl String? // facture / reçu justificatif
+  note          String?
+  recordedById  String?
+  recordedBy    Member?   @relation("TransactionRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([registryId])
+  @@index([type])
+  @@index([date])
+}
+
+// ------------------------------------------------------------
+// PROJETS (immobiliers, événementiels, business)
+// ------------------------------------------------------------
+model Project {
+  id          String    @id @default(cuid())
+  registryId  String
+  registry    Registry  @relation(fields: [registryId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  budget      Float     @default(0)
+  status      String    @default("PLANNED") // PLANNED | IN_PROGRESS | COMPLETED | CANCELLED
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  phases       ProjectPhase[]
+  tasks        ProjectTask[]
+  contributions ProjectContribution[]
+
+  @@index([registryId])
+  @@index([status])
+}
+
+// ------------------------------------------------------------
+// PHASES DU PROJET (découpage WBS)
+// ------------------------------------------------------------
+model ProjectPhase {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int      @default(0)
+  progress  Int      @default(0) // 0-100 %
+  budget    Float?
+  status    String   @default("PENDING") // PENDING | IN_PROGRESS | DONE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks ProjectTask[]
+
+  @@index([projectId])
+}
+
+// ------------------------------------------------------------
+// TÂCHES (« Qui fait quoi »)
+// ------------------------------------------------------------
+model ProjectTask {
+  id          String        @id @default(cuid())
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phaseId     String?
+  phase       ProjectPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  assigneeId  String?
+  assignee    Member?       @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  status      String        @default("TODO") // TODO | IN_PROGRESS | DONE
+  dueDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([projectId])
+  @@index([assigneeId])
+}
+
+// ------------------------------------------------------------
+// APPORTS AU PROJET (« Qui paie quoi »)
+// kind = CASH (numéraire) | IN_KIND (en nature)
+// ------------------------------------------------------------
+model ProjectContribution {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount      Float    @default(0)
+  kind        String   @default("CASH") // CASH | IN_KIND
+  description String? // ex : « apport de 10 sacs de ciment »
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@index([memberId])
+}
+
+// ------------------------------------------------------------
+// ANNONCES (nouvelles, visibles selon portée)
+// ------------------------------------------------------------
+model Announcement {
+  id         String    @id @default(cuid())
+  registryId String? // null + isGlobal = true → toutes familles
+  registry   Registry? @relation(fields: [registryId], references: [id], onDelete: Cascade)
+  title      String
+  content    String
+  isGlobal   Boolean   @default(false) // visible par les autres registres
+  authorId   String
+  author     Member    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+
+  @@index([registryId])
+}
+
+// ------------------------------------------------------------
+// JOURNAL D'AUDIT (traçabilité : qui a modifié quoi et quand)
+// ------------------------------------------------------------
+model AuditLog {
+  id         String   @id @default(cuid())
+  memberId   String?
+  member     Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  action     String // CREATE | UPDATE | DELETE | VALIDATE | REJECT | LOGIN | LOGOUT
+  entityType String // Member, Registry, Payment, Transaction, Project…
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([memberId])
+  @@index([entityType])
+  @@index([createdAt])
+}
