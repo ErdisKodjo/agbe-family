@@ -91,6 +91,34 @@ Réalisé conformément au **Cahier des Charges PGF v1.0**.
 Palette **« Émeraude & Or »** : prospérité, famille, croissance — barre latérale
 « forêt profonde », accents dorés, typographie Geist. Thème clair, UI bilingue FR.
 
+## 📸 Aperçu de l'application
+
+**Connexion & Tableau de bord administrateur**
+
+| Connexion — split-screen « forêt & or » | Tableau de bord — KPIs, flux de trésorerie |
+|:---:|:---:|
+| ![Écran de connexion](docs/screenshots/login.png) | ![Tableau de bord](docs/screenshots/dashboard.png) |
+
+**Modules clés**
+
+| Registres & Groupes | Cotisations & validation des paiements |
+|:---:|:---:|
+| ![Registres](docs/screenshots/registres.png) | ![Cotisations](docs/screenshots/cotisations.png) |
+
+| Trésorerie — journal de caisse | Projets — WBS, tâches & apports |
+|:---:|:---:|
+| ![Trésorerie](docs/screenshots/tresorerie.png) | ![Projets](docs/screenshots/projets.png) |
+
+| Membres — annuaire | Rapports & Exports imprimables |
+|:---:|:---:|
+| ![Membres](docs/screenshots/membres.png) | ![Rapports](docs/screenshots/rapports.png) |
+
+**Mobile-first (390 px)**
+
+| Tableau de bord mobile | Registres mobile |
+|:---:|:---:|
+| ![Tableau de bord mobile](docs/screenshots/mobile-dashboard.png) | ![Registres mobile](docs/screenshots/mobile-registres.png) |
+
 ---
 
 ## 🚀 Installation
