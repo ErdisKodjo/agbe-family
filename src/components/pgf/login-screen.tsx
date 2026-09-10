@@ -37,7 +37,7 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* ---- Panneau de marque ---- */}
-      <div className="pgf-brand-gradient relative hidden lg:flex flex-col justify-between p-12 text-white overflow-hidden">
+      <div className="pgf-brand-gradient pgf-brand-enter relative hidden lg:flex flex-col justify-between p-12 text-white overflow-hidden">
         <div className="pgf-dots absolute inset-0 opacity-60" />
         {/* Filigrane décoratif (emblème géant) */}
         <Image
@@ -46,6 +46,7 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
           width={460}
           height={460}
           aria-hidden
+          loading="eager"
           className="absolute -right-24 top-1/2 -translate-y-1/2 opacity-[0.15] pointer-events-none select-none"
         />
         <div className="relative">
@@ -56,6 +57,7 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
               width={84}
               height={84}
               priority
+              loading="eager"
               className="rounded-2xl ring-1 ring-white/25 shadow-[0_10px_36px_rgba(0,0,0,0.45)] shrink-0"
             />
             <div>
@@ -67,7 +69,7 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
         </div>
 
         <div className="relative max-w-md">
-          <h1 className="text-4xl font-bold leading-tight tracking-tight">
+          <h1 className="text-4xl font-bold leading-tight tracking-tight text-balance">
             La fortune de votre famille,
             <span className="text-amber-300"> enfin centralisée.</span>
           </h1>
@@ -98,7 +100,7 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
       {/* ---- Formulaire ---- */}
       <div className="pgf-bg flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-3 mb-8">
+          <div className="pgf-rise lg:hidden flex items-center gap-3 mb-8">
             <Image
               src="/logo-128.webp"
               alt="Emblème AGBE Family"

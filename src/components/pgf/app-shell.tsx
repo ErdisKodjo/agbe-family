@@ -146,7 +146,7 @@ export function AppShell({
                     key={item.id}
                     onClick={() => onNavigate(item.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative",
+                      "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/80",
                       active
                         ? "bg-sidebar-accent text-white shadow-sm"
                         : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-white"
@@ -167,7 +167,7 @@ export function AppShell({
               <button
                 onClick={() => onNavigate("profile")}
                 className={cn(
-                  "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/80",
                   view === "profile"
                     ? "bg-sidebar-accent text-white"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-white"
@@ -278,7 +278,7 @@ export function AppShell({
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 relative",
+                  "flex flex-col items-center justify-center gap-1 relative rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
                   active ? "text-primary" : "text-muted-foreground"
                 )}
               >
@@ -300,7 +300,7 @@ export function AppShell({
               <DropdownMenuTrigger asChild>
                 <button
                   className={cn(
-                    "flex flex-col items-center justify-center gap-1 relative outline-none",
+                    "flex flex-col items-center justify-center gap-1 relative rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
                     moreActive ? "text-primary" : "text-muted-foreground"
                   )}
                   aria-label="Plus de vues"
@@ -322,7 +322,7 @@ export function AppShell({
             <button
               onClick={() => onNavigate("profile")}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 relative",
+                "flex flex-col items-center justify-center gap-1 relative rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
                 view === "profile" ? "text-primary" : "text-muted-foreground"
               )}
             >

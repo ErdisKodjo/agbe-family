@@ -156,7 +156,7 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (v: any) => void })
                 <div>
                   <div className="flex justify-between text-sm mb-1.5">
                     <span className="text-muted-foreground">Encaissé</span>
-                    <span className="font-semibold">
+                    <span className="font-semibold tabular-nums">
                       {formatMoney(monthly.collected)} / {formatMoney(monthly.expected)}
                     </span>
                   </div>
@@ -164,11 +164,11 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (v: any) => void })
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="rounded-xl bg-emerald-500/10 p-3">
-                    <p className="text-xl font-bold text-emerald-700">{monthly.paidCount}</p>
+                    <p className="text-xl font-bold text-emerald-700 tabular-nums">{monthly.paidCount}</p>
                     <p className="text-[11px] text-emerald-700/80">à jour sur {monthly.totalMembers}</p>
                   </div>
                   <div className="rounded-xl bg-amber-500/10 p-3">
-                    <p className="text-xl font-bold text-amber-700">{monthly.late.length}</p>
+                    <p className="text-xl font-bold text-amber-700 tabular-nums">{monthly.late.length}</p>
                     <p className="text-[11px] text-amber-700/80">en retard</p>
                   </div>
                 </div>
@@ -187,7 +187,7 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (v: any) => void })
                           <span className="text-xs font-medium flex-1 truncate">
                             {l.member.lastName} {l.member.firstName}
                           </span>
-                          <span className="text-xs font-semibold text-amber-700">{formatMoney(l.rest)}</span>
+                          <span className="text-xs font-semibold text-amber-700 tabular-nums">{formatMoney(l.rest)}</span>
                         </div>
                       ))}
                     </div>
@@ -255,7 +255,7 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (v: any) => void })
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs leading-snug line-clamp-2">{a.details || `${AUDIT_ACTION_LABELS[a.action] ?? a.action} · ${a.entityType}`}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                    <p className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
                       {a.member ? `${a.member.firstName} ${a.member.lastName} · ` : ""}
                       {formatDateTime(a.createdAt)}
                     </p>

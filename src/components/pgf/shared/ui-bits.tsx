@@ -42,11 +42,11 @@ export function StatCard({
             {loading ? (
               <Skeleton className="h-8 w-28 mt-2" />
             ) : (
-              <p className="text-2xl font-bold tracking-tight mt-1.5 truncate" title={value}>
+              <p className="text-2xl font-bold tracking-tight mt-1.5 truncate tabular-nums" title={value}>
                 {value}
               </p>
             )}
-            {hint && !loading && <p className="text-xs text-muted-foreground mt-1 truncate">{hint}</p>}
+            {hint && !loading && <p className="text-xs text-muted-foreground font-medium mt-1 truncate">{hint}</p>}
           </div>
           <div className={cn("rounded-xl p-2.5 shrink-0", tones[tone])}>
             <Icon className="w-5 h-5" />
@@ -78,7 +78,7 @@ export function PageHeader({
           </div>
         )}
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-balance">{title}</h1>
           {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
         </div>
       </div>
@@ -145,7 +145,7 @@ export function FundingBar({ value, className }: { value: number; className?: st
   return (
     <div className={cn("h-2.5 rounded-full bg-secondary overflow-hidden", className)}>
       <div
-        className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-all"
+        className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-[width] duration-500 ease-out"
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>

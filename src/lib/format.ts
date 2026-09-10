@@ -3,13 +3,14 @@
 // ============================================================
 
 export function formatMoney(amount: number): string {
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(amount) + " FCFA";
+  // Espace fine insécable (U+202F) : l'unité ne se sépare jamais du montant
+  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(amount) + "\u202F" + "FCFA";
 }
 
 export function formatMoneyShort(amount: number): string {
   const abs = Math.abs(amount);
-  if (abs >= 1_000_000) return `${(amount / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M`;
-  if (abs >= 1_000) return `${(amount / 1_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} k`;
+  if (abs >= 1_000_000) return `${(amount / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}\u202FM`;
+  if (abs >= 1_000) return `${(amount / 1_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}\u202Fk`;
   return amount.toLocaleString("fr-FR");
 }
 
