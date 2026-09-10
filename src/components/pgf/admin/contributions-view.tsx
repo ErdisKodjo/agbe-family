@@ -3,7 +3,7 @@
 // PGF — Module Cotisations (mensuelles + occasionnelles)
 // + validation des paiements avec preuve
 // ============================================================
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { get, post, patch, del, put } from "../api";
 import type { CampaignRow, PaymentRow, RegistryInfo, MemberRow, PledgeDetail } from "../types";
 import { PageHeader, MemberAvatar, PaymentStatusBadge, FundingBar, EmptyState, MoneyText } from "../shared/ui-bits";
@@ -66,11 +66,71 @@ import {
   Pencil,
   ExternalLink,
   HandCoins,
+  Flower2,
+  HeartHandshake,
+  Baby,
+  Droplets,
+  Stethoscope,
+  GraduationCap,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney, formatDate, monthLabel } from "@/lib/format";
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { downloadCSV } from "../api";
+
+// Modèles de cotisations nommées (occasionnelles) — pré-remplissent l'intitulé
+const OCCASION_TEMPLATES = [
+  {
+    id: "FUNERAILLES",
+    label: "Funérailles",
+    icon: Flower2,
+    name: "Cotisation pour les funérailles de ",
+    description: "Soutien exceptionnel à la famille endeuillée.",
+  },
+  {
+    id: "MARIAGE",
+    label: "Mariage",
+    icon: HeartHandshake,
+    name: "Cotisation pour le mariage de ",
+    description: "Soutien au mariage du membre de la famille.",
+  },
+  {
+    id: "BAPTEME",
+    label: "Baptême",
+    icon: Droplets,
+    name: "Cotisation pour le baptême de ",
+    description: "Cotisation pour le baptême de l'enfant.",
+  },
+  {
+    id: "NAISSANCE",
+    label: "Naissance",
+    icon: Baby,
+    name: "Cotisation pour la naissance de ",
+    description: "Cadeau de bienvenue au nouveau-né.",
+  },
+  {
+    id: "MALADIE",
+    label: "Maladie / Accident",
+    icon: Stethoscope,
+    name: "Cotisation pour les soins de ",
+    description: "Assistance médicale du membre.",
+  },
+  {
+    id: "ETUDES",
+    label: "Études",
+    icon: GraduationCap,
+    name: "Cotisation pour les études de ",
+    description: "Aide à la scolarité de l'enfant.",
+  },
+  {
+    id: "AUTRE",
+    label: "Autre",
+    icon: Tag,
+    name: "",
+    description: "",
+  },
+] as const;
 
 export function ContributionsView() {
   const [tab, setTab] = useState("monthly");
@@ -115,6 +175,7 @@ export function ContributionsView() {
 
   // Formulaire montants personnalisés (Option B)
   const [customPledges, setCustomPledges] = useState<Record<string, number>>({});
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const load = async (): Promise<CampaignRow[] | undefined> => {
     setLoading(true);
@@ -151,6 +212,7 @@ export function ContributionsView() {
       type,
       name: "",
       description: "",
+      occasion: "",
       registryId: registries[0]?.id ?? "",
       amount: type === "MONTHLY" ? 5000 : 0,
       targetAmount: type === "OCCASIONAL" ? 100000 : 0,
@@ -160,6 +222,20 @@ export function ContributionsView() {
     });
     setCustomPledges({});
     setCreateOpen(true);
+  };
+
+  // Cotisation nommée : applique un modèle d'événement (funérailles, mariage…)
+  // puis place le curseur à la fin de l'intitulé pour compléter « de X »
+  const applyTemplate = (t: (typeof OCCASION_TEMPLATES)[number]) => {
+    setForm((f) => ({ ...f, occasion: t.id, name: t.name, description: t.description }));
+    setTimeout(() => {
+      const el = nameInputRef.current;
+      if (el) {
+        el.focus();
+        const pos = el.value.length;
+        el.setSelectionRange(pos, pos);
+      }
+    }, 40);
   };
 
   const saveCampaign = async () => {
@@ -620,14 +696,45 @@ export function ContributionsView() {
             <DialogDescription>
               {form.type === "MONTHLY"
                 ? "Définissez le montant fixe et la date butoire. Tous les membres du registre seront engagés."
-                : "Lancez une campagne de cotisation occasionnelle avec montant unique ou personnalisé par membre."}
+                : "Lancez une campagne nommée (funérailles, mariage, baptême…) avec montant unique ou personnalisé par membre."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid sm:grid-cols-2 gap-4">
+            {form.type === "OCCASIONAL" && (
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Cotisation nommée — type d'événement</Label>
+                <div className="flex flex-wrap gap-2">
+                  {OCCASION_TEMPLATES.map((t) => {
+                    const Icon = t.icon;
+                    const active = form.occasion === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => applyTemplate(t)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          active
+                            ? "border-primary/60 bg-primary/10 text-primary"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        }`}
+                        title={t.name ? `Pré-remplit : « ${t.name.trim()}… »` : "Intitulé libre"}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Choisissez un modèle puis complétez l'intitulé (ex : « Cotisation pour les funérailles de Papa X »).
+                </p>
+              </div>
+            )}
             <div className="space-y-2 sm:col-span-2">
               <Label>Intitulé *</Label>
               <Input
+                ref={nameInputRef}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder={form.type === "MONTHLY" ? `Cotisation Mensuelle ${monthLabel(new Date().getMonth() + 1)}` : "Cotisation pour le mariage de Jean"}

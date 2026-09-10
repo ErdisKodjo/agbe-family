@@ -37,6 +37,9 @@ Réalisé conformément au **Cahier des Charges PGF v1.0**.
 - ✅ **Preuve de paiement** : photo/ capture Mobile Money téléversée par le membre
 - ✅ Validation par le trésorier → **trésorerie créditée automatiquement**
 - ✅ **Cotisation occasionnelle (appel à fonds)** avec objectif global
+- ✅ **Cotisations nommées** : modèles d'événements — Funérailles, Mariage, Baptême,
+  Naissance, Maladie/Accident, Études — qui pré-remplissent l'intitulé
+  (ex : « Cotisation pour les funérailles de Papa X »)
 - ✅ **Option A** : montant unique — **Option B** : montants personnalisés par paliers
   (l'admin coche les membres et leur dû : « les oncles 50 000, les cousins 10 000 »)
 - ✅ Barre de progression de l'objectif
