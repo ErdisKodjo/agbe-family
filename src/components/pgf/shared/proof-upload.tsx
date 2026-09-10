@@ -4,12 +4,10 @@
 // ============================================================
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { uploadFile } from "../api";
 import { Paperclip, X, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 export function ProofUpload({
   value,
@@ -67,11 +65,27 @@ export function ProofUpload({
         </div>
       ) : (
         <>
-          <Input
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="flex w-full items-center gap-3 rounded-lg border border-dashed border-muted-foreground/40 bg-secondary/40 px-3.5 py-3 text-left transition-colors hover:border-primary/70 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+          >
+            <span className="rounded-lg bg-primary/10 text-primary p-2 shrink-0">
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">
+                {uploading ? "Téléversement en cours…" : "Joindre une pièce justificative"}
+              </span>
+              <span className="block text-xs text-muted-foreground truncate">JPG, PNG, WebP ou PDF — 8 Mo max.</span>
+            </span>
+          </button>
+          <input
             ref={inputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-            className={cn("cursor-pointer file:mr-3 file:cursor-pointer")}
+            className="hidden"
             disabled={uploading}
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -79,11 +93,6 @@ export function ProofUpload({
               e.target.value = "";
             }}
           />
-          {uploading && (
-            <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" /> Téléversement en cours…
-            </p>
-          )}
         </>
       )}
     </div>

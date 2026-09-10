@@ -31,6 +31,9 @@ Réalisé conformément au **Cahier des Charges PGF v1.0**.
 ### 3. Module financier — Cotisations
 - ✅ **Cotisation mensuelle récurrente** : montant fixe + date butoire (ex : le 5)
 - ✅ Tableau de bord mensuel : **qui a payé / qui est en retard**
+- ✅ **Encaissement direct par l'admin** : saisie d'une cotisation reçue en main
+  propre (espèces / Mobile Money) → paiement validé + trésorerie créditée
+  immédiatement, avec suggestion du reste dû et raccourci par membre dans le suivi
 - ✅ **Preuve de paiement** : photo/ capture Mobile Money téléversée par le membre
 - ✅ Validation par le trésorier → **trésorerie créditée automatiquement**
 - ✅ **Cotisation occasionnelle (appel à fonds)** avec objectif global

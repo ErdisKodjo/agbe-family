@@ -1,11 +1,13 @@
 // GET /api/payments — Paiements (filtrage selon rôle : confidentialité)
 //   ?campaignId= &status= &mine=1 (espace membre) &registryId=
 // POST /api/payments — Déclarer un paiement (membre ou trésorier) + preuve
+//   body.direct = true (admin) → encaissement immédiat : paiement créé VALIDÉ
+//   + recette portée au journal de caisse du registre en une seule transaction.
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth, isAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
-import { ROLES } from "@/lib/constants";
+import { ROLES, INCOME_CATEGORIES } from "@/lib/constants";
 
 export async function GET(req: NextRequest) {
   try {
@@ -59,13 +61,67 @@ export async function POST(req: NextRequest) {
     const amount = Number(body.amount);
     const campaignId = body.campaignId ? String(body.campaignId) : null;
     const memberId = isAdmin(me) && body.memberId ? String(body.memberId) : me.id;
+    const direct = body.direct === true && isAdmin(me);
 
     if (!amount || amount <= 0) return NextResponse.json({ error: "Montant invalide" }, { status: 400 });
 
-    let campaign = null;
-    if (campaignId) {
-      campaign = await db.contributionCampaign.findUnique({ where: { id: campaignId } });
-      if (!campaign) return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+    const campaign = campaignId
+      ? await db.contributionCampaign.findUnique({ where: { id: campaignId } })
+      : null;
+    if (campaignId && !campaign) return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+
+    const member = direct
+      ? await db.member.findUnique({
+          where: { id: memberId },
+          select: { id: true, firstName: true, lastName: true, registryId: true },
+        })
+      : null;
+    if (direct && !member) return NextResponse.json({ error: "Membre introuvable" }, { status: 404 });
+
+    // ---- Encaissement direct (admin) : VALIDÉ + trésorerie créditée atomiquement ----
+    if (direct && member) {
+      const payment = await db.$transaction(async (tx) => {
+        const created = await tx.payment.create({
+          data: {
+            campaignId,
+            memberId,
+            amount,
+            method: String(body.method || "MOBILE_MONEY"),
+            reference: body.reference ? String(body.reference) : null,
+            proofUrl: body.proofUrl ? String(body.proofUrl) : null,
+            note: body.note ? String(body.note) : null,
+            status: "VALIDATED",
+            paidAt: new Date(),
+            validatedAt: new Date(),
+            validatedById: me.id,
+          },
+        });
+        const registryId = campaign?.registryId ?? member.registryId;
+        if (registryId) {
+          await tx.transaction.create({
+            data: {
+              registryId,
+              type: "INCOME",
+              date: new Date(),
+              label: `Cotisation — ${member.firstName} ${member.lastName}${campaign ? ` (${campaign.name})` : ""}`,
+              category: INCOME_CATEGORIES.COTISATION ? "COTISATION" : "AUTRE",
+              amount,
+              note: `Encaissement direct #${created.id} (saisi par ${me.firstName} ${me.lastName})`,
+              recordedById: me.id,
+            },
+          });
+        }
+        return created;
+      });
+
+      await audit(
+        me.id,
+        "CREATE",
+        "Payment",
+        payment.id,
+        `Encaissement direct de ${amount} FCFA — ${member.firstName} ${member.lastName}${campaign ? ` (« ${campaign.name} »)` : " (cotisation libre)"}`
+      );
+      return NextResponse.json({ payment });
     }
 
     const payment = await db.payment.create({

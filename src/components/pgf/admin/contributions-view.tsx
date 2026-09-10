@@ -65,6 +65,7 @@ import {
   Download,
   Pencil,
   ExternalLink,
+  HandCoins,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney, formatDate, monthLabel } from "@/lib/format";
@@ -85,6 +86,18 @@ export function ContributionsView() {
   const [proofView, setProofView] = useState<PaymentRow | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // ---- Encaissement direct (saisie admin) ----
+  const [cashInOpen, setCashInOpen] = useState(false);
+  const [cashForm, setCashForm] = useState<any>({
+    memberId: "",
+    campaignId: "",
+    amount: "",
+    method: "MOBILE_MONEY",
+    reference: "",
+    note: "",
+    proofUrl: null as string | null,
+  });
+
   const [form, setForm] = useState<any>({
     type: "MONTHLY",
     name: "",
@@ -103,7 +116,7 @@ export function ContributionsView() {
   // Formulaire montants personnalisés (Option B)
   const [customPledges, setCustomPledges] = useState<Record<string, number>>({});
 
-  const load = async () => {
+  const load = async (): Promise<CampaignRow[] | undefined> => {
     setLoading(true);
     try {
       const [camps, pays, regs, mems] = await Promise.all([
@@ -116,6 +129,7 @@ export function ContributionsView() {
       setPayments(pays.payments);
       setRegistries(regs.registries);
       setMembers(mems.members);
+      return camps.campaigns;
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -222,6 +236,74 @@ export function ContributionsView() {
     }
   };
 
+  // ---- Encaissement direct : ouverture (avec pré-remplissage depuis le suivi) ----
+  const openCashIn = (memberId = "", campaignId = "", amount = "") => {
+    setCashForm({
+      memberId,
+      campaignId,
+      amount,
+      method: "CASH",
+      reference: "",
+      note: "",
+      proofUrl: null,
+    });
+    setCashInOpen(true);
+  };
+
+  // Reste dû suggéré pour le couple (membre, campagne) sélectionné
+  const suggestedRest = useMemo(() => {
+    if (!cashForm.memberId || !cashForm.campaignId) return null;
+    const c = campaigns.find((x) => x.id === cashForm.campaignId);
+    const pledge = c?.pledges.find((p) => p.memberId === cashForm.memberId);
+    if (!pledge) return null;
+    const rest = Math.max(0, pledge.amountDue - pledge.amountPaid);
+    return rest > 0 ? rest : null;
+  }, [cashForm.memberId, cashForm.campaignId, campaigns]);
+
+  // Campagnes proposées à l'encaissement (actives + celle pré-remplie si clôturée)
+  const cashCampaigns = useMemo(() => {
+    const active = campaigns.filter((c) => c.status === "ACTIVE");
+    const cur = campaigns.find((c) => c.id === cashForm.campaignId);
+    return cur && cur.status !== "ACTIVE" ? [...active, cur] : active;
+  }, [campaigns, cashForm.campaignId]);
+
+  const saveCashIn = async () => {
+    if (!cashForm.memberId) {
+      toast.error("Choisissez le membre concerné");
+      return;
+    }
+    const amount = Number(cashForm.amount);
+    if (!amount || amount <= 0) {
+      toast.error("Montant invalide");
+      return;
+    }
+    setSaving(true);
+    try {
+      await post("/api/payments", {
+        memberId: cashForm.memberId,
+        campaignId: cashForm.campaignId || null,
+        amount,
+        method: cashForm.method,
+        reference: cashForm.reference || null,
+        note: cashForm.note || null,
+        proofUrl: cashForm.proofUrl,
+        direct: true,
+      });
+      toast.success("Cotisation encaissée — trésorerie créditée");
+      setCashInOpen(false);
+      const fresh = await load();
+      // Resynchronise le suivi détaillé resté ouvert derrière le dialogue d'encaissement
+      if (detail) {
+        const updated = fresh?.find((c) => c.id === detail.id);
+        if (updated) setDetail(updated);
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const closeCampaign = async (c: CampaignRow) => {
     try {
       await patch(`/api/campaigns/${c.id}`, { status: "CLOSED" });
@@ -269,6 +351,14 @@ export function ContributionsView() {
         description="Cotisations mensuelles récurrentes et appels à fonds occasionnels."
         actions={
           <>
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => openCashIn()}
+              title="Enregistrer une cotisation encaissée (espèces, Mobile Money…)"
+            >
+              <HandCoins className="w-4 h-4 mr-1.5" /> Encaisser
+            </Button>
             <Button variant="outline" size="sm" onClick={() => openCreate("OCCASIONAL")}>
               <Megaphone className="w-4 h-4 mr-1.5" /> Appel à fonds
             </Button>
@@ -688,6 +778,136 @@ export function ContributionsView() {
         </DialogContent>
       </Dialog>
 
+      {/* ================= Dialog encaissement direct (admin) ================= */}
+      <Dialog open={cashInOpen} onOpenChange={setCashInOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto pgf-scroll">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="rounded-lg bg-emerald-600/10 text-emerald-700 p-1.5">
+                <HandCoins className="w-4 h-4" />
+              </span>
+              Encaisser une cotisation
+            </DialogTitle>
+            <DialogDescription>
+              Cotisation reçue en main propre (espèces, Mobile Money, virement) : le paiement est enregistré comme
+              validé et la trésorerie du registre créditée immédiatement.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Membre *</Label>
+              <Select value={cashForm.memberId} onValueChange={(v) => setCashForm({ ...cashForm, memberId: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir le membre cotisant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {members
+                    .slice()
+                    .sort((a, b) => a.lastName.localeCompare(b.lastName, "fr"))
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.lastName} {m.firstName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Campagne</Label>
+              <Select
+                value={cashForm.campaignId || "LIBRE"}
+                onValueChange={(v) => setCashForm({ ...cashForm, campaignId: v === "LIBRE" ? "" : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Affecter à une campagne" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LIBRE">Cotisation libre (sans campagne)</SelectItem>
+                  {cashCampaigns.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                      {c.status !== "ACTIVE" ? " (clôturée)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 sm:col-span-2">
+              <div className="space-y-2">
+                <Label>Montant (FCFA) *</Label>
+                <Input
+                  type="number"
+                  min={100}
+                  step={100}
+                  value={cashForm.amount}
+                  onChange={(e) => setCashForm({ ...cashForm, amount: e.target.value })}
+                  className="tabular-nums"
+                  placeholder="Ex : 5000"
+                />
+                {suggestedRest && (
+                  <button
+                    type="button"
+                    className="text-xs text-primary font-medium hover:underline"
+                    onClick={() => setCashForm({ ...cashForm, amount: String(suggestedRest) })}
+                  >
+                    Reste dû : {formatMoney(suggestedRest)} — utiliser ce montant
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Méthode</Label>
+                <Select value={cashForm.method} onValueChange={(v) => setCashForm({ ...cashForm, method: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(PAYMENT_METHODS).map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {PAYMENT_METHOD_LABELS[m]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Référence</Label>
+              <Input
+                value={cashForm.reference}
+                onChange={(e) => setCashForm({ ...cashForm, reference: e.target.value })}
+                placeholder="N° de transaction Mobile Money, n° de reçu…"
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Note</Label>
+              <Textarea
+                value={cashForm.note}
+                onChange={(e) => setCashForm({ ...cashForm, note: e.target.value })}
+                rows={2}
+                placeholder="Précision éventuelle (ex : acompte, don complémentaire…)"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <ProofUpload value={cashForm.proofUrl} onChange={(url) => setCashForm({ ...cashForm, proofUrl: url })} />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCashInOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={saveCashIn} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <HandCoins className="w-4 h-4 mr-1.5" /> Encaisser
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ================= Dialog suivi détaillé ================= */}
       <Dialog open={!!detail} onOpenChange={(v) => !v && setDetail(null)}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto pgf-scroll">
@@ -713,6 +933,7 @@ export function ContributionsView() {
                       <TableHead className="text-right">Dû</TableHead>
                       <TableHead className="text-right">Payé</TableHead>
                       <TableHead className="text-right">Reste</TableHead>
+                      <TableHead className="w-14"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -742,6 +963,19 @@ export function ContributionsView() {
                               <span className={`text-sm font-semibold tabular-nums ${rest > 0 ? "text-amber-700" : "text-emerald-600"}`}>
                                 {rest > 0 ? formatMoney(rest) : "—"}
                               </span>
+                            </TableCell>
+                            <TableCell>
+                              {rest > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                                  title={`Encaisser ${formatMoney(rest)} — ${p.member.firstName} ${p.member.lastName}`}
+                                  onClick={() => openCashIn(p.memberId, detail.id, String(rest))}
+                                >
+                                  <HandCoins className="w-4 h-4" />
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                         );
