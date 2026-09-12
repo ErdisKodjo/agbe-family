@@ -253,12 +253,18 @@ une seule fois, au premier lancement) :
    consommation déduite ; il n'existe pas de palier gratuit permanent).
 2. **New Project → Deploy from GitHub repo** → autorisez Railway à accéder au dépôt
    `ErdisKodjo/agbe-family`. Le `Dockerfile` est détecté et utilisé automatiquement.
-3. Choisissez la région **EU West (Francfort)** lors de la création du projet.
+3. Choisissez la région **EU West** lors de la création du projet — chez Railway,
+   il s'agit de `europe-west4` (Pays-Bas) : pas de Francfort, mais données en UE
+   et latence raisonnable vers l'Afrique de l'Ouest.
 4. Avant le premier démarrage, définissez les variables du § 8.2 (service →
    *Variables*).
-5. Créez **deux volumes** (service → *Settings → Volumes*) : l'un monté sur
-   `/app/db` (base SQLite — critique), l'autre sur `/app/uploads` (preuves de
-   paiement). Les données survivent aux redéploiements.
+5. Créez **UN SEUL volume** monté sur `/app/db` (service → *Settings → Volumes*).
+   Railway (comme Render) n'autorise qu'**un volume par service** : l'entrypoint
+   redirige alors automatiquement `/app/uploads` vers `/app/db/uploads` (lien
+   symbolique) — base SQLite, justificatifs de paiement et sauvegardes partagent
+   le même volume persistant. Le plan Hobby donne 5 Go par défaut, redimensionnables
+   à chaud et facturés à l'usage réel. Sur VPS (docker-compose), les deux bind mounts
+   `/app/db` et `/app/uploads` sont détectés et la redirection se désactive d'elle-même.
 6. *Settings → Networking → Generate Domain* : l'application est publiée en HTTPS sur
    `xxx.up.railway.app`. Un domaine personnalisé se pose par enregistrement CNAME
    (certificat géré par Railway).
@@ -283,9 +289,12 @@ une seule fois, au premier lancement) :
    (512 Mo) suffit pour démarrer ; Standard (2 Go) est confortable pour les pics
    d'annonces.
 3. Région : **Frankfurt**.
-4. Ajoutez **deux disques persistants** (service → *Disks*) : `/app/db` (1 Go mini)
-   et `/app/uploads` (1 Go mini). Un disque est lié au service : ne modifiez jamais
-   le chemin de montage et ne supprimez pas le service sans sauvegarde préalable.
+4. Ajoutez **un disque persistant** monté sur `/app/db` (service → *Disks*,
+   1 Go minimum) : l'entrypoint y redirige aussi `/app/uploads` (mono-volume,
+   cf. § 8.3). Si vous préférez deux disques distincts (`/app/db` et `/app/uploads`),
+   la redirection se désactive automatiquement — les deux montages sont alors
+   utilisés tels quels. Ne modifiez jamais le chemin de montage d'un disque et ne
+   supprimez pas le service sans sauvegarde préalable.
 5. Renseignez les variables du § 8.2 (service → *Environment*).
 6. La construction de l'image s'exécute sur un builder **sans** disque attaché :
    c'est prévu — toute l'initialisation de la base se fait dans l'entrypoint, **au

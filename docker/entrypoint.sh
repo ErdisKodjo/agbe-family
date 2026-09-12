@@ -17,6 +17,25 @@ if [ ! -f "$DB" ]; then
   cp /app/pristine.db "$DB"
 fi
 
+# ------------------------------------------------------------
+# Mono-volume PaaS : Railway/Render n'autorisent qu'UN volume par
+# service. /app/uploads est donc redirigé vers /app/db/uploads pour
+# que les justificatifs de paiement vivent sur le même volume que
+# la base SQLite. Détection par numéro de périphérique (stat -c %d) :
+#   - identique à /app → /app/uploads n'est PAS un point de montage
+#     (simple dossier de l'image) → remplacement par lien symbolique ;
+#   - différent → /app/uploads est déjà monté (VPS docker-compose et
+#     ses 2 bind mounts, ou futur PaaS multi-volume) → on n'y touche pas.
+# Idempotent : une fois le lien en place, stat le suit vers le volume
+# (périphérique différent) → la condition devient fausse.
+# ------------------------------------------------------------
+if [ ! -e /app/uploads ] || [ "$(stat -c %d /app)" = "$(stat -c %d /app/uploads)" ]; then
+  mkdir -p /app/db/uploads
+  rm -rf /app/uploads
+  ln -sfn /app/db/uploads /app/uploads
+  echo "[entrypoint] Mono-volume PaaS : /app/uploads redirigé vers /app/db/uploads (justificatifs sur le volume /app/db)."
+fi
+
 echo "[entrypoint] Amorçage du compte administrateur (idempotent)…"
 node /app/scripts/bootstrap-admin.mjs
 

@@ -60,7 +60,9 @@ COPY docker/entrypoint.sh /app/entrypoint.sh
 COPY scripts/bootstrap-admin.mjs /app/scripts/bootstrap-admin.mjs
 RUN chmod +x /app/entrypoint.sh && mkdir -p /app/uploads
 
-# Volumes persistants : base SQLite + preuves de paiement
+# Volume persistant : base SQLite (+ justificatifs via la redirection
+# mono-volume de l'entrypoint — PaaS n'autorise qu'UN volume par service ;
+# docker-compose/VPS monte ici ses 2 bind mounts, la redirection s'auto-désactive)
 VOLUME ["/app/db", "/app/uploads"]
 
 EXPOSE 3000

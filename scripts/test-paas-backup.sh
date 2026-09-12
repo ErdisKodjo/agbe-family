@@ -60,6 +60,9 @@ chmod +x "$TESTDIR/rclone"
 sed -e "s#DB=\"/app/db/custom.db\"#DB=\"$TESTDIR/db/custom.db\"#" \
     -e "s#mkdir -p /app/db\$#mkdir -p $TESTDIR/db#" \
     -e "s#cp /app/pristine.db#cp $TESTDIR/custom.db#" \
+    -e "s#mkdir -p /app/db/uploads#mkdir -p $TESTDIR/db/uploads#" \
+    -e "s#rm -rf /app/uploads#rm -rf $TESTDIR/uploads#" \
+    -e "s#ln -sfn /app/db/uploads /app/uploads#ln -sfn $TESTDIR/db/uploads $TESTDIR/uploads#" \
     -e "s#/app/db/backups#$TESTDIR/backups#g" \
     -e "s#node /app/scripts/bootstrap-admin.mjs#true#" \
     -e "s#sleep 86400#sleep 1; break#" \
@@ -84,6 +87,8 @@ echo "--- vérifications ---"
 ls "$TESTDIR/backups" "$TESTDIR/remote"
 test -f "$TESTDIR"/backups/agbe-*.db && echo "OK : export local écrit (rétention 7 j)"
 test -f "$TESTDIR"/remote/agbe-*.db && echo "OK : copie hors-site effectuée"
+test -L "$TESTDIR/uploads" && test -d "$TESTDIR/db/uploads" \
+  && echo "OK : mono-volume PaaS — uploads redirigé vers db/uploads (lien symbolique)"
 python3 - "$TESTDIR"/remote/agbe-*.db <<'EOF'
 import sqlite3, sys
 con = sqlite3.connect(sys.argv[1])
