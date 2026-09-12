@@ -60,10 +60,12 @@ COPY docker/entrypoint.sh /app/entrypoint.sh
 COPY scripts/bootstrap-admin.mjs /app/scripts/bootstrap-admin.mjs
 RUN chmod +x /app/entrypoint.sh && mkdir -p /app/uploads
 
-# Volume persistant : base SQLite (+ justificatifs via la redirection
-# mono-volume de l'entrypoint — PaaS n'autorise qu'UN volume par service ;
-# docker-compose/VPS monte ici ses 2 bind mounts, la redirection s'auto-désactive)
-VOLUME ["/app/db", "/app/uploads"]
+# Données persistantes : AUCUNE instruction VOLUME — le builder Railway la
+# rejette (« docker VOLUME is not supported, use Railway Volumes ») et
+# docker-compose (VPS) monte ses bind mounts ./db et ./uploads explicitement.
+# Persistance : volume Railway /app/db (mono-volume, cf. docker/entrypoint.sh)
+# ou bind mounts docker-compose — /app/uploads est redirigé vers /app/db/uploads
+# quand il n'est pas déjà monté.
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
