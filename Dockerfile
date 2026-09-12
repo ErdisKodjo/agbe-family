@@ -68,7 +68,9 @@ RUN chmod +x /app/entrypoint.sh && mkdir -p /app/uploads
 # quand il n'est pas déjà monté.
 
 EXPOSE 3000
+# Healthcheck dynamique : Railway injecte son propre PORT (ex. 8080) —
+# on sonde process.env.PORT au lieu d'un 3000 en dur (VPS compose : 3000).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 
 ENTRYPOINT ["/app/entrypoint.sh"]
