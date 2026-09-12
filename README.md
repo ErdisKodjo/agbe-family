@@ -186,9 +186,10 @@ L'infrastructure de production est prête dans le dépôt :
 | Fichier | Rôle |
 |---|---|
 | `Dockerfile` | Image Docker multi-étapes (build bun → runtime node, standalone) |
-| `docker-compose.yml` | Application + conteneur de sauvegardes automatiques |
+| `docker-compose.yml` | Application + conteneur de sauvegardes automatiques (rétention 30 j, copie hors-site optionnelle) |
 | `docker/entrypoint.sh` | Initialisation de la base + amorçage du compte admin |
 | `deploy/nginx.conf` | Reverse proxy HTTPS (Let's Encrypt, gzip, cache, rate-limit) |
+| `deploy/rclone.conf.example` | Modèle de configuration pour la sauvegarde hors-site (Backblaze B2, Storage Box…) |
 | `docs/DEPLOIEMENT.md` | **Guide d'installation pas-à-pas** (VPS + Docker + Nginx) |
 
 Deux documents PDF accompagnent la mise en service :
@@ -196,7 +197,7 @@ Deux documents PDF accompagnent la mise en service :
   (connexion, comptes de démonstration, rôles, chaque module, FAQ) ;
 - `docs/AGBE-Plan-Deploiement.pdf` — plan d'infrastructure : comparatif de trois
   niveaux d'hébergement (VPS économique / VPS performance / cloud managé),
-  dimensionnement, sécurité et feuille de route de scalabilité.
+  dimensionnement (calibré pour 400+ membres : Hetzner CX32, SQLite WAL), sécurité et feuille de route de scalabilité.
 
 Démarrage rapide sur un VPS : `docker compose up -d --build` (cf. `docs/DEPLOIEMENT.md`).
 

@@ -34,7 +34,12 @@ services:
       retries: 3
       start_period: 20s
 
-  # Sauvegarde automatique quotidienne de la base (02h30) + rétention 14 jours
+  # Sauvegarde automatique quotidienne de la base (02h30) + rétention 30 jours
+  # + copie hors-site OPTIONNELLE : renseignez BACKUP_REMOTE dans .env et créez
+  #   deploy/rclone.conf (modèle : deploy/rclone.conf.example).
+  #   Ex. BACKUP_REMOTE="b2:agbe-backups" — la copie part alors au même rythme que
+  #   l'export local. À 400+ membres, une sauvegarde hors-site quotidienne est
+  #   fortement recommandée (le serveur ne doit jamais être la seule copie).
   backup:
     image: alpine:3.20
     container_name: agbe-backup
@@ -42,18 +47,26 @@ services:
     volumes:
       - agbe_db:/data/db:ro
       - ./backups:/backups
+      - ./deploy:/rclone:ro            # rclone.conf à y déposer (voir .example)
     environment:
       TZ: Africa/Lome
+      BACKUP_REMOTE: ${BACKUP_REMOTE:-}   # vide = pas de copie hors-site
+      RCLONE_CONFIG: /rclone/rclone.conf
     entrypoint:
       - /bin/sh
       - -c
       - |
-        apk add --no-cache sqlite tzdata >/dev/null &&
+        apk add --no-cache sqlite rclone tzdata >/dev/null &&
         while true; do
           STAMP=$$(date +%Y%m%d-%H%M%S);
           sqlite3 /data/db/custom.db ".backup '/backups/agbe-$${STAMP}.db'";
           echo "[backup] agbe-$${STAMP}.db écrit";
-          find /backups -name 'agbe-*.db' -mtime +14 -delete;
+          if [ -n "$$BACKUP_REMOTE" ]; then
+            rclone copy "/backups/agbe-$${STAMP}.db" "$$BACKUP_REMOTE" \
+              && echo "[backup] copie hors-site : $$BACKUP_REMOTE" \
+              || echo "[backup] AVERTISSEMENT : échec de la copie hors-site (vérifiez deploy/rclone.conf)";
+          fi;
+          find /backups -name 'agbe-*.db' -mtime +30 -delete;
           sleep 86400;
         done
 

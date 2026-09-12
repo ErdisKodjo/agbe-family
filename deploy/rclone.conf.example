@@ -1,0 +1,39 @@
+# ============================================================
+# AGBE Family — Modèle de configuration rclone (copie hors-site)
+# Copiez ce fichier en `deploy/rclone.conf` (il est ignoré par Git),
+# puis renseignez BACKUP_REMOTE dans le fichier `.env` du serveur.
+#   cp deploy/rclone.conf.example deploy/rclone.conf
+#
+# Le conteneur « agbe-backup » pousse chaque export quotidien vers
+# cette destination. À 400+ membres, la sauvegarde hors-site
+# quotidienne est fortement recommandée.
+# ============================================================
+
+# --- Exemple 1 : Backblaze B2 (≈ 1–2 €/mois pour des années d'archives) ---
+# [b2]
+# type = b2
+# account = VOTRE_CLE_APPLICATION
+# key = VOTRE_CLE_APPLICATION_SECRETE
+# hard_delete = true
+
+# --- Exemple 2 : Hetzner Storage Box (S3) ---
+# [storagebox]
+# type = s3
+# provider = Other
+# access_key_id = VOTRE_IDENTIFIANT
+# secret_access_key = VOTRE_CLE_SECRETE
+# endpoint = VOTREBOX.your-objectstorage.com
+
+# --- Exemple 3 : Google Drive personnel ---
+# [gdrive]
+# type = drive
+# scope = drive
+# token = {"access_token":"..."}
+# root_folder_id = ID_DU_DOSSIER
+
+# Puis dans .env :
+#   BACKUP_REMOTE="b2:agbe-backups"        # <remote>:<chemin/conteneur>
+#
+# Test manuel (depuis le serveur) :
+#   docker compose exec backup sh -c \
+#     'rclone ls "$BACKUP_REMOTE" --config "$RCLONE_CONFIG"'

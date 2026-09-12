@@ -1,7 +1,11 @@
 // ============================================================
 // AGBE Family — Amorçage du compte Admin Général (idempotent)
 // Crée le registre racine + le SUPER_ADMIN uniquement si la base
-// ne contient aucun membre. Tourne dans le conteneur (node:22-alpine).
+// ne contient aucun membre. Tourne dans le conteneur (node:22-slim).
+// Active au passage le mode WAL de SQLite (persistant dans le fichier) :
+// les lectures ne sont plus bloquées pendant les écritures — indispensable
+// dès que plusieurs dizaines de membres consultent la plateforme en même
+// temps (pics d'annonces, échéances de cotisations).
 //   ADMIN_PHONE     — numéro international de l'admin (déf. +22890000000)
 //   ADMIN_PASSWORD  — mot de passe provisoire (déf. changé à la 1re connexion)
 //   ADMIN_FIRST_NAME / ADMIN_LAST_NAME — nom affiché
@@ -23,6 +27,11 @@ const firstName = process.env.ADMIN_FIRST_NAME || "Admin";
 const lastName = process.env.ADMIN_LAST_NAME || "AGBE";
 
 async function main() {
+  // Mode WAL (Write-Ahead Logging) : propriété PERSISTANTE de la base.
+  // Idempotent — réactivé sans effet de bord à chaque démarrage du conteneur.
+  await db.$queryRawUnsafe("PRAGMA journal_mode=WAL;");
+  console.log("[bootstrap] SQLite : mode WAL actif (lectures concurrentes non bloquées).");
+
   const members = await db.member.count();
   if (members > 0) {
     console.log(`[bootstrap] ${members} membre(s) déjà présents — aucun amorçage nécessaire.`);
