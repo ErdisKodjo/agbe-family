@@ -1,0 +1,62 @@
+# ============================================================
+# AGBE Family — Orchestration de production
+#   docker compose up -d          → démarre l'application
+#   docker compose logs -f app    → suit les journaux
+#   docker compose pull && docker compose up -d --build → mise à jour
+#
+# L'application écoute sur 127.0.0.1:3000 (derrière Nginx, cf. deploy/nginx.conf).
+# Les volumes préservent la base SQLite et les preuves de paiement.
+# ============================================================
+services:
+  app:
+    build: .
+    image: agbe-family:latest
+    container_name: agbe-family
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"   # exposé uniquement en local — Nginx fait le relais public
+    environment:
+      DATABASE_URL: file:/app/db/custom.db
+      NODE_ENV: production
+      # Compte Admin Général créé au PREMIER démarrage uniquement (idempotent).
+      # Changez ces valeurs avant le premier `up`, puis conservez-les dans .env.
+      ADMIN_PHONE: ${ADMIN_PHONE:-+22890000000}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AgbeAdmin@2026}
+      ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-Admin}
+      ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-AGBE}
+    volumes:
+      - agbe_db:/app/db          # base SQLite — À SAUVEGARDER
+      - agbe_uploads:/app/uploads # preuves de paiement — À SAUVEGARDER
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # Sauvegarde automatique quotidienne de la base (02h30) + rétention 14 jours
+  backup:
+    image: alpine:3.20
+    container_name: agbe-backup
+    restart: unless-stopped
+    volumes:
+      - agbe_db:/data/db:ro
+      - ./backups:/backups
+    environment:
+      TZ: Africa/Lome
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        apk add --no-cache sqlite tzdata >/dev/null &&
+        while true; do
+          STAMP=$$(date +%Y%m%d-%H%M%S);
+          sqlite3 /data/db/custom.db ".backup '/backups/agbe-$${STAMP}.db'";
+          echo "[backup] agbe-$${STAMP}.db écrit";
+          find /backups -name 'agbe-*.db' -mtime +14 -delete;
+          sleep 86400;
+        done
+
+volumes:
+  agbe_db:
+  agbe_uploads:

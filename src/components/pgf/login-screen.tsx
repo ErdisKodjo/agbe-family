@@ -168,41 +168,13 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Se connecter"}
                 </Button>
               </form>
-
-              <div className="mt-6 rounded-xl border border-dashed border-border bg-secondary/40 p-4">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Accès de démonstration</p>
-                <div className="grid gap-2 text-xs">
-                  <button
-                    type="button"
-                    className="flex items-center justify-between rounded-lg bg-card border px-3 py-2 hover:border-primary/50 transition-colors text-left"
-                    onClick={() => {
-                      setPhone("+22890101010");
-                      setPassword("Admin@2026");
-                    }}
-                  >
-                    <span className="font-medium">👑 Administrateur Général</span>
-                    <span className="text-muted-foreground tabular-nums">+22890101010</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center justify-between rounded-lg bg-card border px-3 py-2 hover:border-primary/50 transition-colors text-left"
-                    onClick={() => {
-                      setPhone("+22890202020");
-                      setPassword("Famille2026!");
-                    }}
-                  >
-                    <span className="font-medium">👤 Membre (1ʳᵉ connexion)</span>
-                    <span className="text-muted-foreground tabular-nums">+22890202020</span>
-                  </button>
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-2.5">
-                  Le compte membre illustre le changement de mot de passe obligatoire à la première connexion.
-                </p>
-              </div>
             </CardContent>
           </Card>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
+            Mot de passe oublié ? Contactez l'administrateur de votre registre familial.
+          </p>
+          <p className="text-center text-xs text-muted-foreground mt-2">
             © {new Date().getFullYear()} AGBE Family · Plateforme de Gestion Familiale (PGF)
           </p>
         </div>

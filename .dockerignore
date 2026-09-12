@@ -1,0 +1,36 @@
+# Dépendances et artefacts de build
+node_modules
+.next
+bun.lockb
+*.log
+
+# Données locales (jamais dans l'image — volumes de production)
+db
+uploads
+backups
+
+# Environnement
+.env
+.env.local
+.env.production
+
+# Dépôt Git et documentation lourde
+.git
+.gitignore
+repo-agbe-family
+docs/screenshots
+download
+*.md
+!README.md
+
+# Outils de dev / skills (hors périmètre de l'image)
+.agents
+.claude
+agents
+skills
+scripts/*.py
+scripts/*.sh
+!docker
+dev.log
+server.log
+worklog.md

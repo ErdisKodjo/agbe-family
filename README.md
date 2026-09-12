@@ -163,6 +163,10 @@ bun run dev           # http://localhost:3000
 
 ## 👤 Comptes de démonstration
 
+> Ces identifiants ne sont **plus affichés sur la page de connexion** :
+> la saisie est manuelle. Le détail des rôles et des parcours de test
+> figure dans le **Guide d'utilisation** (`docs/AGBE-Guide-Utilisation.pdf`, chapitre 03).
+
 | Rôle | Téléphone | Mot de passe |
 |---|---|---|
 | 👑 Administrateur Général | `+22890101010` | `Admin@2026` |
@@ -173,12 +177,41 @@ bun run dev           # http://localhost:3000
 
 > Le compte « Membre » illustre le **changement de mot de passe obligatoire**
 > à la première connexion (spécification § 2.2 du cahier des charges).
+> Après un test, réinitialisez-le avec `bunx tsx scripts/reset_demo_member.ts`.
+
+## 📦 Mise en production (déploiement)
+
+L'infrastructure de production est prête dans le dépôt :
+
+| Fichier | Rôle |
+|---|---|
+| `Dockerfile` | Image Docker multi-étapes (build bun → runtime node, standalone) |
+| `docker-compose.yml` | Application + conteneur de sauvegardes automatiques |
+| `docker/entrypoint.sh` | Initialisation de la base + amorçage du compte admin |
+| `deploy/nginx.conf` | Reverse proxy HTTPS (Let's Encrypt, gzip, cache, rate-limit) |
+| `docs/DEPLOIEMENT.md` | **Guide d'installation pas-à-pas** (VPS + Docker + Nginx) |
+
+Deux documents PDF accompagnent la mise en service :
+- `docs/AGBE-Guide-Utilisation.pdf` — guide complet pour les utilisateurs et testeurs
+  (connexion, comptes de démonstration, rôles, chaque module, FAQ) ;
+- `docs/AGBE-Plan-Deploiement.pdf` — plan d'infrastructure : comparatif de trois
+  niveaux d'hébergement (VPS économique / VPS performance / cloud managé),
+  dimensionnement, sécurité et feuille de route de scalabilité.
+
+Démarrage rapide sur un VPS : `docker compose up -d --build` (cf. `docs/DEPLOIEMENT.md`).
 
 ## 📁 Structure du projet
 
 ```
 ├── prisma/schema.prisma          # Modèle de données (13 modèles)
 ├── scripts/seed.ts               # Données de démonstration
+├── scripts/bootstrap-admin.mjs   # Amorçage du compte admin (production)
+├── scripts/reset_demo_member.ts  # Réinitialisation du compte membre démo
+├── Dockerfile                    # Image Docker de production
+├── docker-compose.yml            # Orchestration + sauvegardes
+├── docker/entrypoint.sh          # Point d'entrée du conteneur
+├── deploy/nginx.conf             # Reverse proxy HTTPS
+├── docs/                         # Guide d'utilisation + plan de déploiement (PDF)
 ├── src/
 │   ├── app/
 │   │   ├── page.tsx              # SPA (auth + espaces admin/membre)
