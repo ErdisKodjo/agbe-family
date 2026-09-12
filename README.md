@@ -187,10 +187,10 @@ L'infrastructure de production est prête dans le dépôt :
 |---|---|
 | `Dockerfile` | Image Docker multi-étapes (build bun → runtime node, standalone) |
 | `docker-compose.yml` | Application + conteneur de sauvegardes automatiques (rétention 30 j, copie hors-site optionnelle) |
-| `docker/entrypoint.sh` | Initialisation de la base + amorçage du compte admin |
+| `docker/entrypoint.sh` | Initialisation de la base + amorçage du compte admin + boucle de sauvegarde intégrée (PaaS) |
 | `deploy/nginx.conf` | Reverse proxy HTTPS (Let's Encrypt, gzip, cache, rate-limit) |
 | `deploy/rclone.conf.example` | Modèle de configuration pour la sauvegarde hors-site (Backblaze B2, Storage Box…) |
-| `docs/DEPLOIEMENT.md` | **Guide d'installation pas-à-pas** (VPS + Docker + Nginx) |
+| `docs/DEPLOIEMENT.md` | **Guide d'installation pas-à-pas** (VPS + Docker + Nginx, et alternative PaaS Railway/Render) |
 
 Deux documents PDF accompagnent la mise en service :
 - `docs/AGBE-Guide-Utilisation.pdf` — guide complet pour les utilisateurs et testeurs
@@ -199,7 +199,10 @@ Deux documents PDF accompagnent la mise en service :
   niveaux d'hébergement (VPS économique / VPS performance / cloud managé),
   dimensionnement (calibré pour 400+ membres : Hetzner CX32, SQLite WAL), sécurité et feuille de route de scalabilité.
 
-Démarrage rapide sur un VPS : `docker compose up -d --build` (cf. `docs/DEPLOIEMENT.md`).
+Démarrage rapide sur un VPS : `docker compose up -d --build` (cf. `docs/DEPLOIEMENT.md` § 2–7).
+Sans serveur à administrer : déploiement direct sur **Railway ou Render** avec le même
+`Dockerfile` (volumes persistants pour SQLite, sauvegarde quotidienne intégrée —
+cf. `docs/DEPLOIEMENT.md` § 8).
 
 ## 📁 Structure du projet
 

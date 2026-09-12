@@ -33,7 +33,9 @@ FROM node:22-slim
 WORKDIR /app
 
 # OpenSSL + fuse horaire + healthcheck via node (wget/curl absents de slim)
-RUN apt-get update -qq && apt-get install -y --no-install-recommends openssl ca-certificates tzdata \
+# sqlite3 + rclone : boucle de sauvegarde intégrée (PaaS Railway/Render,
+# cf. docker/entrypoint.sh) + inspection de la base via le shell de la plateforme
+RUN apt-get update -qq && apt-get install -y --no-install-recommends openssl ca-certificates tzdata sqlite3 rclone \
     && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \

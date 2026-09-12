@@ -54,3 +54,6 @@ server.log
 /skills/
 # Sauvegarde hors-site (rclone) — ne jamais commiter les clés
 deploy/rclone.conf
+
+# test de sauvegarde PaaS (artefacts temporaires)
+scripts/paas-backup-test/

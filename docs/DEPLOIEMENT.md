@@ -1,8 +1,10 @@
 # Déploiement AGBE Family — Guide pas-à-pas
 
-Ce document décrit la mise en production de la plateforme **AGBE Family (PGF)** sur un
-serveur dédié (VPS), avec Docker, Nginx et HTTPS. Le plan d'architecture et la
-comparaison des hébergeurs figurent dans le document *Plan de déploiement AGBE Family*
+Ce document décrit la mise en production de la plateforme **AGBE Family (PGF)** selon
+deux voies : la voie principale (§ 2 à 7) sur un **serveur dédié (VPS)** avec Docker,
+Nginx et HTTPS ; la voie alternative (§ 8) sur un **PaaS** (Railway ou Render) pour une
+équipe qui ne veut administrer aucun serveur. Le plan d'architecture et la comparaison
+détaillée des hébergeurs figurent dans le document *Plan de déploiement AGBE Family*
 (PDF) livré avec ce guide.
 
 ## 1. Vue d'ensemble de l'architecture
@@ -34,7 +36,7 @@ Fichiers fournis dans le dépôt :
 |---|---|
 | `Dockerfile` | Image de production multi-étapes (build bun → runtime node) |
 | `docker-compose.yml` | Orchestration : application + sauvegardes automatiques |
-| `docker/entrypoint.sh` | Initialisation de la base + amorçage admin + démarrage |
+| `docker/entrypoint.sh` | Initialisation de la base + amorçage admin + boucle de sauvegarde intégrée (PaaS, § 8) |
 | `scripts/bootstrap-admin.mjs` | Création idempotente du compte Admin Général + activation du mode WAL |
 | `deploy/nginx.conf` | Reverse proxy HTTPS prêt à l'emploi |
 | `deploy/rclone.conf.example` | Modèle de configuration pour la copie hors-site des sauvegardes |
@@ -200,3 +202,148 @@ applicatifs. En deçà, l'architecture actuelle reste la bonne.
 | Erreur Prisma « engine » au démarrage | Image reconstruite sur alpine | Utiliser le `Dockerfile` fourni (runtime Debian) |
 | « login refusé » après restauration | Sessions invalidées (attendu) | Se reconnecter ; les sessions expirées sont purgées |
 | Page lente / 413 sur upload | `client_max_body_size` trop bas | Vérifier la valeur (12m) dans `deploy/nginx.conf` |
+
+## 8. Alternative PaaS — Railway ou Render (sans serveur à administrer)
+
+Cette section s'adresse aux familles qui ne disposent d'aucune ressource d'administration
+système. Les deux plateformes construisent et hébergent l'application à partir du dépôt
+GitHub (`git push` = mise en production), génèrent l'HTTPS automatiquement et proposent
+journaux, métriques et retour arrière en un clic. Le `Dockerfile` du dépôt est utilisé
+tel quel — **aucun fichier à modifier**.
+
+### 8.1 Pourquoi Railway et Render conviennent (et pas Vercel)
+
+L'application repose sur **SQLite** (fichier unique) : la plateforme doit offrir un
+stockage **persistant** et un conteneur **toujours actif**. C'est exactement ce que ces
+deux PaaS proposent — et ce qui manque à Vercel (système de fichiers éphémère + démarrages
+à froid) :
+
+| | Vercel | Railway | Render (payant) | VPS Hetzner CX32 |
+|---|---|---|---|---|
+| SQLite persistant | non — FS éphémère | oui (volume) | oui (disque) | oui (volume Docker) |
+| Conteneur toujours actif | non (fonctions) | oui | oui | oui |
+| Réveil à froid | 0,5–2 s | aucun | aucun | aucun |
+| RAM au tarif d'entrée | — | ~0,5–1 Go à l'usage | 512 Mo (Starter) | **8 Go** |
+| Coût mensuel indicatif | 20 $ (Pro requis) | 5–15 $ | 7–25 $ | ≈ 9 € |
+| Administration système | aucune | aucune | aucune | à votre charge |
+| Sauvegarde quotidienne | — | boucle intégrée (§ 8.5) | boucle intégrée (§ 8.5) | conteneur dédié |
+| Postgres managé (avenir) | Neon/Turso | oui | oui | auto-hébergé |
+
+> Tarifs indicatifs à la rédaction de ce guide — vérifiez les grilles au moment de
+> souscrire. Choisir de préférence la **région Francfort** sur les deux plateformes
+> (latence Lomé comparable à celle d'un VPS européen).
+
+### 8.2 Variables d'environnement (identiques sur les deux plateformes)
+
+À définir **avant le premier démarrage** (l'amorçage du compte Admin Général se fait
+une seule fois, au premier lancement) :
+
+| Variable | Valeur d'exemple | Rôle |
+|---|---|---|
+| `ADMIN_PHONE` | `+22890101010` | identifiant de connexion du Admin Général |
+| `ADMIN_PASSWORD` | `AgbeAdmin@2026` | provisoire — changement forcé à la 1re connexion |
+| `ADMIN_FIRST_NAME` / `ADMIN_LAST_NAME` | `Prénom` / `NOM` | affichage du compte |
+| `TZ` | `Africa/Lome` | horodatage des sauvegardes et journaux |
+| `BACKUP_REMOTE` | `b2:agbe-backups` | active la sauvegarde quotidienne intégrée (§ 8.5) |
+| `RCLONE_CONFIG_B2_*` | cf. § 8.5 | configuration rclone par variables d'environnement |
+
+### 8.3 Déploiement sur Railway — pas à pas
+
+1. Créez un compte sur `railway.app` et souscrivez le plan **Hobby** (~5 $/mois,
+   consommation déduite ; il n'existe pas de palier gratuit permanent).
+2. **New Project → Deploy from GitHub repo** → autorisez Railway à accéder au dépôt
+   `ErdisKodjo/agbe-family`. Le `Dockerfile` est détecté et utilisé automatiquement.
+3. Choisissez la région **EU West (Francfort)** lors de la création du projet.
+4. Avant le premier démarrage, définissez les variables du § 8.2 (service →
+   *Variables*).
+5. Créez **deux volumes** (service → *Settings → Volumes*) : l'un monté sur
+   `/app/db` (base SQLite — critique), l'autre sur `/app/uploads` (preuves de
+   paiement). Les données survivent aux redéploiements.
+6. *Settings → Networking → Generate Domain* : l'application est publiée en HTTPS sur
+   `xxx.up.railway.app`. Un domaine personnalisé se pose par enregistrement CNAME
+   (certificat géré par Railway).
+7. Premier démarrage : l'entrypoint initialise la base, amorce l'admin (mode WAL
+   activé), démarre le serveur. Vérifiez `https://xxx.up.railway.app/api`.
+8. Ajustez les limites du service (*Settings → Resources*) : **1 Go de RAM
+   recommandé pour 400+ membres** (la facturation suit l'usage réel).
+9. Shell d'accès : `railway ssh` (CLI) — l'image embarque `sqlite3` et `rclone`
+   pour inspecter la base ou déclencher une sauvegarde manuelle.
+10. Chaque `git push` sur `main` redéploie automatiquement (avec construction de
+    l'image et healthcheck).
+
+### 8.4 Déploiement sur Render — pas à pas
+
+1. Créez un compte sur `render.com` → **New → Web Service** → connectez le dépôt
+   GitHub `ErdisKodjo/agbe-family`. Le runtime **Docker** (notre `Dockerfile`) est
+   détecté automatiquement.
+2. **⚠️ Prenez le plan Starter (7 $/mois) au minimum.** Le plan gratuit est à
+   proscrire absolument : le service s'endort après 15 min d'inactivité (première
+   connexion pénalisée d'environ une minute — l'anti-fluidité) et **n'offre pas de
+   disque persistant** : la base serait effacée à chaque mise en veille. Starter
+   (512 Mo) suffit pour démarrer ; Standard (2 Go) est confortable pour les pics
+   d'annonces.
+3. Région : **Frankfurt**.
+4. Ajoutez **deux disques persistants** (service → *Disks*) : `/app/db` (1 Go mini)
+   et `/app/uploads` (1 Go mini). Un disque est lié au service : ne modifiez jamais
+   le chemin de montage et ne supprimez pas le service sans sauvegarde préalable.
+5. Renseignez les variables du § 8.2 (service → *Environment*).
+6. La construction de l'image s'exécute sur un builder **sans** disque attaché :
+   c'est prévu — toute l'initialisation de la base se fait dans l'entrypoint, **au
+   démarrage** (la base vierge `pristine.db` est embarquée dans l'image).
+7. L'application est publiée en HTTPS sur `xxx.onrender.com` ; domaine personnalisé
+   par CNAME. Le healthcheck Docker (`/api`) est repris par la plateforme.
+8. Shell : onglet *Shell* du tableau de bord (instances payantes).
+9. Option : un *Cron Job* Render peut relancer la sauvegarde à heure fixe — la boucle
+   intégrée (§ 8.5) rend cela inutile en pratique.
+
+### 8.5 Sauvegardes et restauration sur PaaS
+
+Sur VPS, le conteneur dédié `backup` (docker-compose) fait le travail. Sur PaaS, ce
+conteneur n'existe pas : l'entrypoint embarque une **boucle de sauvegarde intégrée**,
+activée dès que `BACKUP_REMOTE` est défini. Chaque jour : export SQLite sûr
+(`.backup`, lectures non bloquées), copie sur le volume (`/app/db/backups`, rétention
+7 j) puis **copie hors-site** via rclone (rétention 30 j).
+
+La configuration rclone se fait **par variables d'environnement** (aucun fichier à
+monter). Exemple avec Backblaze B2 (~1 $/mois pour des années de sauvegardes) :
+
+```env
+BACKUP_REMOTE=b2:agbe-backups
+RCLONE_CONFIG_B2_TYPE=b2
+RCLONE_CONFIG_B2_ACCOUNT=<votre keyID B2>
+RCLONE_CONFIG_B2_KEY=<votre application key B2>
+```
+
+Tout remote rclone fonctionne sur le même principe (S3, Google Drive, OneDrive…) :
+préfixez les options par `RCLONE_CONFIG_<NOM>_`. **N'attendez pas des snapshots de
+plateforme une sauvegarde quotidienne programmée — la boucle intégrée est la garantie
+réelle.** À 400+ membres, ne l'activez pas « plus tard » : faites-le au premier jour.
+
+Restauration (depuis le shell de la plateforme) :
+
+```bash
+rclone copy b2:agbe-backups/agbe-AAAAMMJJ-HHMMSS.db /tmp/
+sqlite3 /app/db/custom.db ".restore '/tmp/agbe-AAAAMMJJ-HHMMSS.db'"
+# puis redémarrer le service (les sessions ouvertes expirent — c'est attendu)
+```
+
+### 8.6 Ce qu'il faut savoir avant de choisir
+
+- **Puissance par euro** : au prix d'un Render Starter (7 $, 512 Mo), le VPS CX32
+  (≈ 9 €) offre 8 Go de RAM dédiée et 4 vCPU — ~16× plus de mémoire. À 400+ membres
+  et lors des pics d'annonces, cette marge se ressent en fluidité. Le VPS reste la
+  recommandation principale (§ 2–7) lorsque quelqu'un peut l'administrer.
+- **Ce que le PaaS vous achète** : zéro Nginx, zéro certificat à renouveler, zéro
+  mise à jour OS, veille de sécurité déléguée, déploiement en un `git push`,
+  journaux et retour arrière en un clic. C'est un choix parfaitement défendable pour
+  une équipe sans compétence système.
+- **Ce que le PaaS vous ôte** : la limitation de débit Nginx sur
+  `/api/auth/login` (5 r/s) n'existe plus — les plateformes fournissent des
+  protections réseau de base et l'application conserve scrypt + changement de
+  mot de passe forcé ; les sauvegardes dépendent de la boucle rclone (§ 8.5) et non
+  plus du conteneur dédié.
+- **Localisation des données** : infrastructure européenne si vous choisissez
+  Francfort, mais données hébergées chez un opérateur américain dans les deux cas.
+- **Trajectoire PostgreSQL** : les deux plateformes proposent un Postgres managé
+  (~7 $/mois) — la migration décrite au § 6 reste applicable si les déclencheurs
+  objectifs sont un jour atteints.
