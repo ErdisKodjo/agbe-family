@@ -4,8 +4,8 @@
   "description": "Membres, cotisations, trésorerie et projets familiaux centralisés et sécurisés.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f6f8f6",
-  "theme_color": "#0d5c46",
+  "background_color": "#F7F7F2",
+  "theme_color": "#171B29",
   "orientation": "portrait-primary",
   "lang": "fr",
   "icons": [

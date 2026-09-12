@@ -102,13 +102,16 @@ Réalisé conformément au **Cahier des Charges PGF v1.0**.
 
 ## 🎨 Identité visuelle
 
-Palette **« Émeraude & Or »** : prospérité, famille, croissance — barre latérale
-« forêt profonde », accents dorés, typographie Geist. Thème clair, UI bilingue FR.
+Palette **« Bleu Nuit & Or »** (emblème officiel Agbetossou) : prestige, unité,
+héritage — barre latérale « nuit profonde » (#161C2B), or champagne (#BB9961)
+pour les accents, boutons primaires bleu nuit profond, typographie Geist.
+Thème clair, UI bilingue FR.
 
-Emblème **AGBETOSSOU** (logo provisoire) : sceau circulaire sur cuir vert profond —
-l'arbre de vie encadré de deux mains protectrices, la famille bénie de rayons de
-lumière, devise « **AGBE TƆ SƆ · La vie appartient à Dieu** ». Décliné en favicon,
-icônes PWA (manifest) et écrans d'authentification.
+Emblème **AGBETOSSOU** (logo officiel) : écusson circulaire — monogramme **AG**
+entrelacé (A or, G bleu nuit) encerclé d'une couronne de laurier bicolore,
+cœur familial formé de deux silhouettes, devise « **UNITÉ · AMOUR · RESPECT ·
+HÉRITAGE** ». Décliné en favicon, icônes PWA (manifest, theme bleu nuit #171B29)
+et écrans d'authentification (filigrane rond transparent).
 
 ## 📸 Aperçu de l'application
 

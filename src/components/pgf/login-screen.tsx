@@ -39,21 +39,21 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
       {/* ---- Panneau de marque ---- */}
       <div className="pgf-brand-gradient pgf-brand-enter relative hidden lg:flex flex-col justify-between p-12 text-white overflow-hidden">
         <div className="pgf-dots absolute inset-0 opacity-60" />
-        {/* Filigrane décoratif (emblème géant) */}
+        {/* Filigrane décoratif (emblème rond, coin bas-droit, hors zone de lecture) */}
         <Image
-          src="/logo-512.webp"
+          src="/logo-round-512.webp"
           alt=""
-          width={460}
-          height={460}
+          width={380}
+          height={380}
           aria-hidden
           loading="eager"
-          className="absolute -right-24 top-1/2 -translate-y-1/2 opacity-[0.15] pointer-events-none select-none"
+          className="absolute -right-16 -bottom-24 opacity-[0.10] pointer-events-none select-none"
         />
         <div className="relative">
           <div className="flex items-center gap-4">
             <Image
               src="/logo-512.webp"
-              alt="Emblème AGBETOSSOU : arbre de vie entre deux mains, famille bénie de rayons de lumière"
+              alt="Emblème Agbetossou : monogramme AG or et bleu nuit, couronne de laurier, cœur familial et devise Unité · Amour · Respect · Héritage"
               width={84}
               height={84}
               priority
@@ -63,7 +63,7 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
             <div>
               <p className="font-bold text-xl tracking-tight">AGBE Family</p>
               <p className="text-xs text-white/60">Plateforme de Gestion Familiale</p>
-              <p className="text-[11px] text-amber-300/90 tracking-wide mt-1">AGBE TƆ SƆ · La vie appartient à Dieu</p>
+              <p className="text-[11px] text-amber-300/90 tracking-wide mt-1">Unité · Amour · Respect · Héritage</p>
             </div>
           </div>
         </div>
@@ -91,8 +91,8 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
           </div>
         </div>
 
-        <div className="relative flex items-center gap-2 text-xs text-white/50">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+        <div className="relative flex items-center gap-2 text-xs text-white/65">
+          <ShieldCheck className="w-4 h-4 text-amber-300" />
           Connexion chiffrée · Journal d'audit complet · Données hébergées en privé
         </div>
       </div>
@@ -103,7 +103,7 @@ export function LoginScreen({ onLogin }: { onLogin: (m: CurrentMember) => void }
           <div className="pgf-rise lg:hidden flex items-center gap-3 mb-8">
             <Image
               src="/logo-128.webp"
-              alt="Emblème AGBE Family"
+              alt="Emblème AGBE Family : monogramme AG, laurier et cœur familial"
               width={52}
               height={52}
               priority

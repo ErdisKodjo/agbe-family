@@ -133,7 +133,7 @@ export function RoleBadge({ role }: { role: string }) {
   const map: Record<string, { label: string; className: string }> = {
     SUPER_ADMIN: { label: "Admin Général", className: "bg-primary text-primary-foreground" },
     HEAD: { label: "Tête de Liste", className: "bg-amber-500/90 text-white" },
-    TREASURER: { label: "Trésorier", className: "bg-teal-600 text-white" },
+    TREASURER: { label: "Trésorier", className: "bg-sidebar-primary text-sidebar-primary-foreground" },
     MEMBER: { label: "Membre", className: "bg-secondary text-secondary-foreground" },
   };
   const s = map[role] ?? { label: role, className: "" };
@@ -145,7 +145,7 @@ export function FundingBar({ value, className }: { value: number; className?: st
   return (
     <div className={cn("h-2.5 rounded-full bg-secondary overflow-hidden", className)}>
       <div
-        className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-[width] duration-500 ease-out"
+        className="h-full rounded-full bg-gradient-to-r from-primary to-amber-400 transition-[width] duration-500 ease-out"
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>

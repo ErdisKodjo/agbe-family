@@ -121,7 +121,7 @@ export function AppShell({
           <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border/60">
             <Image
               src="/logo-128.webp"
-              alt="Emblème AGBE Family"
+              alt="Emblème Agbetossou : monogramme AG, laurier et cœur familial"
               width={40}
               height={40}
               priority
@@ -212,7 +212,7 @@ export function AppShell({
             <div className="flex items-center gap-3 px-4 h-14">
               <Image
                 src="/logo-128.webp"
-                alt="Emblème AGBE Family"
+                alt="Emblème Agbetossou"
                 width={30}
                 height={30}
                 priority

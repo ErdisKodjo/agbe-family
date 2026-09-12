@@ -460,7 +460,7 @@ export function ContributionsView() {
           <>
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={() => openCashIn()}
               title="Enregistrer une cotisation encaissée (espèces, Mobile Money…)"
             >
@@ -715,7 +715,7 @@ export function ContributionsView() {
                             <div className="flex justify-end gap-1.5">
                               <Button
                                 size="sm"
-                                className="h-8 bg-emerald-600 hover:bg-emerald-700"
+                                className="h-8 bg-primary hover:bg-primary/90"
                                 onClick={() => validatePayment(p, "VALIDATED")}
                               >
                                 <CheckCircle2 className="w-4 h-4 mr-1" /> Valider
@@ -1165,7 +1165,7 @@ export function ContributionsView() {
             <Button variant="outline" onClick={() => setCashInOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={saveCashIn} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={saveCashIn} disabled={saving} className="bg-primary hover:bg-primary/90">
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               <HandCoins className="w-4 h-4 mr-1.5" /> Encaisser
             </Button>

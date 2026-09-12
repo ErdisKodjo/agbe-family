@@ -8,7 +8,7 @@ export function initialsOf(firstName: string, lastName: string): string {
 
 export function avatarColor(seed: string): string {
   const colors = [
-    "bg-emerald-600",
+    "bg-blue-900",
     "bg-amber-600",
     "bg-teal-600",
     "bg-rose-600",
