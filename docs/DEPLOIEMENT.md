@@ -289,7 +289,10 @@ une seule fois, au premier lancement) :
 5. Renseignez les variables du § 8.2 (service → *Environment*).
 6. La construction de l'image s'exécute sur un builder **sans** disque attaché :
    c'est prévu — toute l'initialisation de la base se fait dans l'entrypoint, **au
-   démarrage** (la base vierge `pristine.db` est embarquée dans l'image).
+   démarrage** (la base vierge `pristine.db` est embarquée dans l'image, à la racine
+   `/app` — hors des chemins montés, car un volume PaaS vide **masque** le contenu
+   de l'image au point de montage : un `pristine.db` placé dans `/app/db` serait
+   invisible au premier démarrage).
 7. L'application est publiée en HTTPS sur `xxx.onrender.com` ; domaine personnalisé
    par CNAME. Le healthcheck Docker (`/api`) est repris par la plateforme.
 8. Shell : onglet *Shell* du tableau de bord (instances payantes).

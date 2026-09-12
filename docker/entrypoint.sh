@@ -11,7 +11,10 @@ DB="/app/db/custom.db"
 
 if [ ! -f "$DB" ]; then
   echo "[entrypoint] Base absente — initialisation du schéma depuis la base vierge…"
-  cp /app/db/pristine.db "$DB"
+  # pristine.db vit hors de /app/db : un volume PaaS monté sur /app/db masque
+  # le contenu de l'image à ce chemin (volume vide au premier montage).
+  mkdir -p /app/db
+  cp /app/pristine.db "$DB"
 fi
 
 echo "[entrypoint] Amorçage du compte administrateur (idempotent)…"

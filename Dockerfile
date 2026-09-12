@@ -51,8 +51,11 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 
-# Base vierge, point d'entrée et script d'amorçage du compte admin
-COPY --from=build /app/db/pristine.db ./db/pristine.db
+# Base vierge, point d'entrée et script d'amorçage du compte admin.
+# ⚠️ pristine.db est copié à la racine /app (et NON dans /app/db) : sur les PaaS
+# (Railway/Render), le volume monté sur /app/db masque le contenu de l'image à
+# ce chemin — un fichier placé dans /app/db serait invisible au 1er démarrage.
+COPY --from=build /app/db/pristine.db ./pristine.db
 COPY docker/entrypoint.sh /app/entrypoint.sh
 COPY scripts/bootstrap-admin.mjs /app/scripts/bootstrap-admin.mjs
 RUN chmod +x /app/entrypoint.sh && mkdir -p /app/uploads

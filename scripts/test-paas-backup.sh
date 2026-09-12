@@ -58,7 +58,8 @@ chmod +x "$TESTDIR/rclone"
 # 4. Entrypoint réel neutralisé : chemins locaux, pas de serveur,
 #    pas d'amorçage node, UNE SEULE itération de la boucle
 sed -e "s#DB=\"/app/db/custom.db\"#DB=\"$TESTDIR/db/custom.db\"#" \
-    -e "s#cp /app/db/pristine.db#cp $TESTDIR/custom.db#" \
+    -e "s#mkdir -p /app/db\$#mkdir -p $TESTDIR/db#" \
+    -e "s#cp /app/pristine.db#cp $TESTDIR/custom.db#" \
     -e "s#/app/db/backups#$TESTDIR/backups#g" \
     -e "s#node /app/scripts/bootstrap-admin.mjs#true#" \
     -e "s#sleep 86400#sleep 1; break#" \
