@@ -40,6 +40,14 @@ Réalisé conformément au **Cahier des Charges PGF v1.0**.
 - ✅ **Cotisations nommées** : modèles d'événements — Funérailles, Mariage, Baptême,
   Naissance, Maladie/Accident, Études — qui pré-remplissent l'intitulé
   (ex : « Cotisation pour les funérailles de Papa X »)
+- ✅ **Bénéficiaire rattaché** : autocomplétion des membres qui complète l'intitulé
+  (« de AGBÉ Kossi ») et rattache l'aide au membre (badge sur la carte, ligne dans le suivi)
+- ✅ **Doublons bloqués** : avertissement temps réel dans le formulaire + garde-fou serveur
+  (intitulés normalisés : casse et accents ignorés)
+- ✅ **Annonce auto au lancement** : publie dans le fil d'annonces (objectif, participation,
+  clôture) en même temps que la campagne — même transaction
+- ✅ **Icônes d'événement** sur les cartes, le suivi et le sélecteur d'encaissement +
+  badge « À clôturer » quand l'échéance est dépassée
 - ✅ **Option A** : montant unique — **Option B** : montants personnalisés par paliers
   (l'admin coche les membres et leur dû : « les oncles 50 000, les cousins 10 000 »)
 - ✅ Barre de progression de l'objectif

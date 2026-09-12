@@ -60,6 +60,8 @@ export interface CampaignRow {
   periodYear?: number | null;
   targetAmount: number;
   allowCustom: boolean;
+  occasionKey?: string | null; // FUNERAILLES | MARIAGE | … (cotisation nommée)
+  beneficiary?: { id: string; firstName: string; lastName: string } | null;
   startDate?: string | null;
   endDate?: string | null;
   status: string;

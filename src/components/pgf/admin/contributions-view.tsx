@@ -2,12 +2,15 @@
 // ============================================================
 // PGF — Module Cotisations (mensuelles + occasionnelles)
 // + validation des paiements avec preuve
+// + cotisations nommées : modèles d'événement, bénéficiaire,
+//   détection de doublons et annonce auto au lancement
 // ============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
 import { get, post, patch, del, put } from "../api";
 import type { CampaignRow, PaymentRow, RegistryInfo, MemberRow, PledgeDetail } from "../types";
 import { PageHeader, MemberAvatar, PaymentStatusBadge, FundingBar, EmptyState, MoneyText } from "../shared/ui-bits";
 import { ProofUpload } from "../shared/proof-upload";
+import { OCCASION_TEMPLATES, occasionIcon, occasionLabel, normalizeCampaignName, type OccasionTemplate } from "../shared/occasions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +27,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,71 +82,15 @@ import {
   Pencil,
   ExternalLink,
   HandCoins,
-  Flower2,
-  HeartHandshake,
-  Baby,
-  Droplets,
-  Stethoscope,
-  GraduationCap,
-  Tag,
+  ChevronsUpDown,
+  X,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney, formatDate, monthLabel } from "@/lib/format";
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { downloadCSV } from "../api";
-
-// Modèles de cotisations nommées (occasionnelles) — pré-remplissent l'intitulé
-const OCCASION_TEMPLATES = [
-  {
-    id: "FUNERAILLES",
-    label: "Funérailles",
-    icon: Flower2,
-    name: "Cotisation pour les funérailles de ",
-    description: "Soutien exceptionnel à la famille endeuillée.",
-  },
-  {
-    id: "MARIAGE",
-    label: "Mariage",
-    icon: HeartHandshake,
-    name: "Cotisation pour le mariage de ",
-    description: "Soutien au mariage du membre de la famille.",
-  },
-  {
-    id: "BAPTEME",
-    label: "Baptême",
-    icon: Droplets,
-    name: "Cotisation pour le baptême de ",
-    description: "Cotisation pour le baptême de l'enfant.",
-  },
-  {
-    id: "NAISSANCE",
-    label: "Naissance",
-    icon: Baby,
-    name: "Cotisation pour la naissance de ",
-    description: "Cadeau de bienvenue au nouveau-né.",
-  },
-  {
-    id: "MALADIE",
-    label: "Maladie / Accident",
-    icon: Stethoscope,
-    name: "Cotisation pour les soins de ",
-    description: "Assistance médicale du membre.",
-  },
-  {
-    id: "ETUDES",
-    label: "Études",
-    icon: GraduationCap,
-    name: "Cotisation pour les études de ",
-    description: "Aide à la scolarité de l'enfant.",
-  },
-  {
-    id: "AUTRE",
-    label: "Autre",
-    icon: Tag,
-    name: "",
-    description: "",
-  },
-] as const;
 
 export function ContributionsView() {
   const [tab, setTab] = useState("monthly");
@@ -148,6 +108,7 @@ export function ContributionsView() {
 
   // ---- Encaissement direct (saisie admin) ----
   const [cashInOpen, setCashInOpen] = useState(false);
+  const [benefOpen, setBenefOpen] = useState(false);
   const [cashForm, setCashForm] = useState<any>({
     memberId: "",
     campaignId: "",
@@ -171,6 +132,9 @@ export function ContributionsView() {
     allowCustom: false,
     startDate: "",
     endDate: "",
+    occasion: "",
+    beneficiaryMemberId: "",
+    publishAnnouncement: true,
   });
 
   // Formulaire montants personnalisés (Option B)
@@ -213,6 +177,8 @@ export function ContributionsView() {
       name: "",
       description: "",
       occasion: "",
+      beneficiaryMemberId: "",
+      publishAnnouncement: true,
       registryId: registries[0]?.id ?? "",
       amount: type === "MONTHLY" ? 5000 : 0,
       targetAmount: type === "OCCASIONAL" ? 100000 : 0,
@@ -225,9 +191,18 @@ export function ContributionsView() {
   };
 
   // Cotisation nommée : applique un modèle d'événement (funérailles, mariage…)
-  // puis place le curseur à la fin de l'intitulé pour compléter « de X »
-  const applyTemplate = (t: (typeof OCCASION_TEMPLATES)[number]) => {
-    setForm((f) => ({ ...f, occasion: t.id, name: t.name, description: t.description }));
+  // puis place le curseur à la fin de l'intitulé pour compléter « de X ».
+  // Si un bénéficiaire est déjà sélectionné, il est conservé dans l'intitulé.
+  const applyTemplate = (t: OccasionTemplate) => {
+    setForm((f) => {
+      let name = t.name;
+      if (f.beneficiaryMemberId) {
+        const b = members.find((m) => m.id === f.beneficiaryMemberId);
+        const full = b ? `${b.lastName} ${b.firstName}` : "";
+        if (full && f.name.endsWith(full)) name = t.name + full;
+      }
+      return { ...f, occasion: t.id, name, description: t.description || f.description };
+    });
     setTimeout(() => {
       const el = nameInputRef.current;
       if (el) {
@@ -238,9 +213,58 @@ export function ContributionsView() {
     }, 40);
   };
 
+  // Bénéficiaire (membre) : complète l'intitulé si le modèle est intact,
+  // sinon l'intitulé déjà saisi est conservé tel quel.
+  const selectBeneficiary = (m: MemberRow) => {
+    const full = `${m.lastName} ${m.firstName}`;
+    setForm((f) => {
+      const tpl = OCCASION_TEMPLATES.find((t) => t.id === f.occasion);
+      let name = f.name;
+      if (tpl && tpl.name && (f.name === tpl.name || f.name === tpl.name + full)) {
+        name = tpl.name + full;
+      }
+      return { ...f, beneficiaryMemberId: m.id, name };
+    });
+    setBenefOpen(false);
+  };
+
+  const clearBeneficiary = () => {
+    setForm((f) => {
+      const tpl = OCCASION_TEMPLATES.find((t) => t.id === f.occasion);
+      const b = members.find((m) => m.id === f.beneficiaryMemberId);
+      let name = f.name;
+      if (b && tpl && tpl.name && f.name === tpl.name + `${b.lastName} ${b.firstName}`) {
+        name = tpl.name;
+      }
+      return { ...f, beneficiaryMemberId: "" };
+    });
+  };
+
+  // Détection de doublon en temps réel : campagne ACTIVE du même registre
+  // portant un intitulé identique (accents/casse/espaces ignorés)
+  const duplicateActive = useMemo(() => {
+    const n = normalizeCampaignName(form.name || "");
+    if (!n) return null;
+    return (
+      campaigns.find(
+        (c) => c.status === "ACTIVE" && c.registry?.id === form.registryId && normalizeCampaignName(c.name) === n
+      ) ?? null
+    );
+  }, [form.name, form.registryId, campaigns]);
+
+  const selectedBeneficiary = members.find((m) => m.id === form.beneficiaryMemberId) ?? null;
+  const beneficiaryMembers = useMemo(
+    () => members.slice().sort((a, b) => a.lastName.localeCompare(b.lastName, "fr")),
+    [members]
+  );
+
   const saveCampaign = async () => {
     if (!form.name.trim()) {
       toast.error("Nom de la campagne requis");
+      return;
+    }
+    if (duplicateActive) {
+      toast.error(`Doublon : « ${duplicateActive.name} » est déjà une campagne active de ce registre`);
       return;
     }
     setSaving(true);
@@ -260,6 +284,9 @@ export function ContributionsView() {
         payload.targetAmount = Number(form.targetAmount);
         payload.allowCustom = form.allowCustom;
         payload.amount = Number(form.amount);
+        payload.occasionKey = form.occasion || undefined;
+        payload.beneficiaryMemberId = form.beneficiaryMemberId || undefined;
+        payload.publishAnnouncement = form.publishAnnouncement;
         if (form.startDate) payload.startDate = form.startDate;
         if (form.endDate) payload.endDate = form.endDate;
         if (form.allowCustom) {
@@ -268,8 +295,12 @@ export function ContributionsView() {
             .map(([memberId, amountDue]) => ({ memberId, amountDue: Number(amountDue) }));
         }
       }
-      await post("/api/campaigns", payload);
-      toast.success("Campagne créée et engagements générés");
+      const res = await post<{ announcementPublished?: boolean }>("/api/campaigns", payload);
+      toast.success(
+        res?.announcementPublished
+          ? "Campagne créée — annonce publiée à la famille"
+          : "Campagne créée et engagements générés"
+      );
       setCreateOpen(false);
       load();
     } catch (e: any) {
@@ -524,18 +555,36 @@ export function ContributionsView() {
           ) : occasional.length === 0 ? (
             <EmptyState icon={Megaphone} title="Aucun appel à fonds" description={"Lancez une campagne : « Cotisation pour le mariage de Jean », « Fonds d'urgence »…"} />
           ) : (
-            occasional.map((c) => (
+            occasional.map((c) => {
+              const OccIcon = occasionIcon(c.occasionKey);
+              const overdue = c.status === "ACTIVE" && c.endDate ? new Date(c.endDate).getTime() < Date.now() : false;
+              return (
               <Card key={c.id} className="border-border/70">
                 <CardContent className="p-5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="rounded-xl bg-amber-500/15 text-amber-600 p-3 shrink-0">
-                        <Megaphone className="w-6 h-6" />
+                        <OccIcon className="w-6 h-6" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-bold truncate">{c.name}</h3>
                           {c.status === "CLOSED" && <Badge variant="secondary">Clôturée</Badge>}
+                          {overdue && (
+                            <Badge className="bg-amber-500/15 text-amber-700 border border-amber-500/30 text-[10px]">
+                              À clôturer — échéance dépassée
+                            </Badge>
+                          )}
+                          {occasionLabel(c.occasionKey) && (
+                            <Badge variant="outline" className="bg-secondary text-[10px] font-normal">
+                              {occasionLabel(c.occasionKey)}
+                            </Badge>
+                          )}
+                          {c.beneficiary && (
+                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/25 text-[10px] font-normal">
+                              Bénéficiaire : {c.beneficiary.firstName} {c.beneficiary.lastName}
+                            </Badge>
+                          )}
                           {c.allowCustom && (
                             <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-[10px]">
                               Montants personnalisés
@@ -589,7 +638,8 @@ export function ContributionsView() {
                   </div>
                 </CardContent>
               </Card>
-            ))
+              );
+            })
           )}
         </TabsContent>
 
@@ -700,7 +750,7 @@ export function ContributionsView() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4 [&>*]:min-w-0">
             {form.type === "OCCASIONAL" && (
               <div className="space-y-2 sm:col-span-2">
                 <Label>Cotisation nommée — type d'événement</Label>
@@ -738,8 +788,86 @@ export function ContributionsView() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder={form.type === "MONTHLY" ? `Cotisation Mensuelle ${monthLabel(new Date().getMonth() + 1)}` : "Cotisation pour le mariage de Jean"}
+                aria-invalid={!!duplicateActive}
               />
+              {duplicateActive && (
+                <p className="text-xs text-amber-700 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2 flex items-start gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    Une campagne active de ce registre porte déjà cet intitulé : « {duplicateActive.name} ». Modifiez le nom
+                    ou clôturez la campagne existante.
+                  </span>
+                </p>
+              )}
             </div>
+            {form.type === "OCCASIONAL" && (
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Bénéficiaire (membre concerné)</Label>
+                <div className="flex gap-2">
+                  <Popover open={benefOpen} onOpenChange={setBenefOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={benefOpen}
+                        className="flex-1 min-w-0 justify-between font-normal h-10"
+                      >
+                        <span className="truncate text-left">
+                          {selectedBeneficiary
+                            ? `${selectedBeneficiary.lastName} ${selectedBeneficiary.firstName}`
+                            : "Sélectionner un membre…"}
+                        </span>
+                        <ChevronsUpDown className="w-4 h-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Rechercher par nom…" />
+                        <CommandList>
+                          <CommandEmpty>
+                            Aucun membre trouvé — complétez l'intitulé manuellement (le bénéficiaire peut ne pas être
+                            membre).
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {beneficiaryMembers.map((m) => (
+                              <CommandItem
+                                key={m.id}
+                                value={`${m.lastName} ${m.firstName} ${m.phone}`}
+                                onSelect={() => selectBeneficiary(m)}
+                              >
+                                <Check
+                                  className={`w-4 h-4 mr-2 shrink-0 ${form.beneficiaryMemberId === m.id ? "opacity-100" : "opacity-0"}`}
+                                />
+                                <span className="truncate">
+                                  {m.lastName} {m.firstName}
+                                  {m.registry.id !== form.registryId && (
+                                    <span className="text-muted-foreground"> · {m.registry.name}</span>
+                                  )}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {selectedBeneficiary && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
+                      onClick={clearBeneficiary}
+                      title="Retirer le bénéficiaire"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Optionnel — sélection complète l'intitulé et rattache l'aide au membre (historique, suivi).
+                </p>
+              </div>
+            )}
             <div className="space-y-2 sm:col-span-2">
               <Label>Description</Label>
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
@@ -747,7 +875,7 @@ export function ContributionsView() {
             <div className="space-y-2">
               <Label>Registre *</Label>
               <Select value={form.registryId} onValueChange={(v) => setForm({ ...form, registryId: v })}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choisir un registre" />
                 </SelectTrigger>
                 <SelectContent>
@@ -774,7 +902,7 @@ export function ContributionsView() {
                   <Label>Période</Label>
                   <div className="flex gap-2">
                     <Select value={String(form.periodMonth)} onValueChange={(v) => setForm({ ...form, periodMonth: Number(v) })}>
-                      <SelectTrigger className="flex-1">
+                      <SelectTrigger className="flex-1 min-w-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -873,6 +1001,28 @@ export function ContributionsView() {
             )}
           </div>
 
+          {form.type === "OCCASIONAL" && (
+            <div className="rounded-lg border border-primary/25 bg-primary/5 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <Checkbox
+                  checked={form.publishAnnouncement}
+                  onCheckedChange={(v) => setForm({ ...form, publishAnnouncement: Boolean(v) })}
+                  className="mt-0.5"
+                />
+                <span className="text-sm">
+                  <span className="font-medium flex items-center gap-1.5">
+                    <Megaphone className="w-3.5 h-3.5 text-primary" />
+                    Publier une annonce à la famille
+                  </span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">
+                    Une annonce reprenant l'intitulé, l'objectif et la clôture paraîtra dans le fil d'annonces dès le
+                    lancement.
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               Annuler
@@ -901,11 +1051,11 @@ export function ContributionsView() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4 [&>*]:min-w-0">
             <div className="space-y-2 sm:col-span-2">
               <Label>Membre *</Label>
               <Select value={cashForm.memberId} onValueChange={(v) => setCashForm({ ...cashForm, memberId: v })}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choisir le membre cotisant" />
                 </SelectTrigger>
                 <SelectContent>
@@ -927,22 +1077,30 @@ export function ContributionsView() {
                 value={cashForm.campaignId || "LIBRE"}
                 onValueChange={(v) => setCashForm({ ...cashForm, campaignId: v === "LIBRE" ? "" : v })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Affecter à une campagne" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="LIBRE">Cotisation libre (sans campagne)</SelectItem>
-                  {cashCampaigns.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                      {c.status !== "ACTIVE" ? " (clôturée)" : ""}
-                    </SelectItem>
-                  ))}
+                  {cashCampaigns.map((c) => {
+                    const OccIcon = occasionIcon(c.occasionKey);
+                    return (
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <OccIcon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                          <span className="truncate">
+                            {c.name}
+                            {c.status !== "ACTIVE" ? " (clôturée)" : ""}
+                          </span>
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:col-span-2">
+            <div className="grid grid-cols-2 gap-4 sm:col-span-2 [&>*]:min-w-0">
               <div className="space-y-2">
                 <Label>Montant (FCFA) *</Label>
                 <Input
@@ -967,7 +1125,7 @@ export function ContributionsView() {
               <div className="space-y-2">
                 <Label>Méthode</Label>
                 <Select value={cashForm.method} onValueChange={(v) => setCashForm({ ...cashForm, method: v })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1030,6 +1188,9 @@ export function ContributionsView() {
                 <DialogDescription>
                   Suivi détaillé : {detail.contributorsCount}/{detail.pledges.length} à jour · Collecté {formatMoney(detail.collected)} sur{" "}
                   {formatMoney(detail.expected)}
+                  {detail.beneficiary
+                    ? ` · Bénéficiaire : ${detail.beneficiary.firstName} ${detail.beneficiary.lastName}`
+                    : ""}
                 </DialogDescription>
               </DialogHeader>
               <div className="overflow-x-auto rounded-lg border">

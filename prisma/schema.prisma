@@ -83,6 +83,7 @@ model Member {
   projectContributions ProjectContribution[]
   announcements      Announcement[]
   auditLogs          AuditLog[]
+  campaignsBeneficiary ContributionCampaign[] @relation("CampaignBeneficiary")
 
   @@index([registryId])
   @@index([role])
@@ -106,6 +107,9 @@ model ContributionCampaign {
   periodYear   Int? // ex: 2026
   targetAmount Float     @default(0) // objectif global (occasionnel)
   allowCustom  Boolean   @default(false) // option B : montants personnalisés
+  occasionKey  String? // FUNERAILLES | MARIAGE | BAPTEME | NAISSANCE | MALADIE | ETUDES | AUTRE (cotisation nommée)
+  beneficiaryMemberId String? // membre concerné par l'événement (funérailles de X…)
+  beneficiary  Member?   @relation("CampaignBeneficiary", fields: [beneficiaryMemberId], references: [id], onDelete: SetNull)
   startDate    DateTime?
   endDate      DateTime?
   status       String    @default("ACTIVE") // ACTIVE | CLOSED
