@@ -92,5 +92,12 @@
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
   },
-  "description": "AGBE Family — Plateforme de Gestion Familiale (PGF) : membres, cotisations, trésorerie et projets familiaux centralisés."
+  "description": "AGBE Family — Plateforme de Gestion Familiale (PGF) : membres, cotisations, trésorerie et projets familiaux centralisés.",
+  "trustedDependencies": [
+    "@parcel/watcher",
+    "@swc/core",
+    "unrs-resolver",
+    "es5-ext",
+    "sharp"
+  ]
 }
