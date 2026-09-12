@@ -256,6 +256,13 @@ une seule fois, au premier lancement) :
 3. Choisissez la région **EU West** lors de la création du projet — chez Railway,
    il s'agit de `europe-west4` (Pays-Bas) : pas de Francfort, mais données en UE
    et latence raisonnable vers l'Afrique de l'Ouest.
+   ⚠️ **Important (plan Hobby)** : la région se règle au niveau du *workspace*
+   (*Account Settings → General → Default Region*), et les volumes s'y
+   provisionnent nativement. Un volume créé pendant que le workspace est réglé
+   sur une autre région (ex. sfo) **ne peut pas migrer** vers l'EU ensuite
+   (l'étape de déploiement `MIGRATE_VOLUMES` échoue sur Hobby) : fixez la région
+   AVANT de créer le volume, sinon supprimez/recréez le volume une fois la
+   région corrigée (les volumes vides sont gratuits à recréer).
 4. Avant le premier démarrage, définissez les variables du § 8.2 (service →
    *Variables*).
 5. Créez **UN SEUL volume** monté sur `/app/db` (service → *Settings → Volumes*).
