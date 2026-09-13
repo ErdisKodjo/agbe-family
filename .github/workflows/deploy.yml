@@ -1,0 +1,27 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Railway deploy
+        run: |
+          echo "Triggering Railway deployment for ErdisKodjo/agbe-family@main..."
+          response=$(curl -s --fail-with-body -X POST "https://backboard.railway.app/graphql/v2" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $RAILWAY_API_TOKEN" \
+            -d '{"query":"mutation{githubRepoDeploy(input:{projectId:\"d2d1dfc9-f816-4888-a0fe-d8cc591b36dd\",repo:\"ErdisKodjo/agbe-family\",branch:\"main\",environmentId:\"e062250b-bf75-4471-bb82-2cc960a9726d\"})}"}' \
+            --max-time 120)
+          echo "Railway response: $response"
+          if ! echo "$response" | grep -q '"githubRepoDeploy"'; then
+            echo "::error::Railway deploy mutation failed — see response above"
+            exit 1
+          fi
+          echo "Deployment triggered successfully."
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
