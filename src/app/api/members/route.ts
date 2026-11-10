@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { requireAdmin, getCurrentMember, hashPassword, normalizePhone, isValidPhone } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { DEFAULT_PASSWORD, ROLES } from "@/lib/constants";
+import { CreateMemberSchema, validationError } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   try {
@@ -89,6 +90,8 @@ export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
     const body = await req.json();
+    const parsedMem = CreateMemberSchema.safeParse(body);
+    if (!parsedMem.success) return validationError(parsedMem.error);
     const firstName = String(body.firstName || "").trim();
     const lastName = String(body.lastName || "").trim();
     const phone = normalizePhone(String(body.phone || ""));

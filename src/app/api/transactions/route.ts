@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { requireAuth, isAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { TRANSACTION_TYPES, INCOME_CATEGORIES, EXPENSE_CATEGORIES, ROLES } from "@/lib/constants";
+import { CreateTransactionSchema, validationError } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   try {
@@ -74,6 +75,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Réservé aux administrateurs et trésoriers" }, { status: 403 });
     }
     const body = await req.json();
+    const parsedTx = CreateTransactionSchema.safeParse(body);
+    if (!parsedTx.success) return validationError(parsedTx.error);
     const type = String(body.type || "");
     const label = String(body.label || "").trim();
     const amount = Number(body.amount);

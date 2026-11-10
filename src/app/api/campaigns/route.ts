@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { requireAdmin, getCurrentMember } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { CAMPAIGN_TYPES } from "@/lib/constants";
+import { CreateCampaignSchema, validationError } from "@/lib/validation";
 import { OCCASION_KEYS, occasionLabel, normalizeCampaignName } from "@/components/pgf/shared/occasions";
 
 // Format « 12 septembre 2026 » pour le contenu d'annonce (fr-FR, long)
@@ -128,6 +129,8 @@ export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
     const body = await req.json();
+    const parsedCamp = CreateCampaignSchema.safeParse(body);
+    if (!parsedCamp.success) return validationError(parsedCamp.error);
     const name = String(body.name || "").trim();
     const type = String(body.type || CAMPAIGN_TYPES.MONTHLY);
     const registryId = String(body.registryId || "");

@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { requireAuth, isAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { ROLES, INCOME_CATEGORIES } from "@/lib/constants";
+import { RecordPaymentSchema, validationError } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   try {
@@ -58,6 +59,8 @@ export async function POST(req: NextRequest) {
   try {
     const me = await requireAuth();
     const body = await req.json();
+    const parsedPay = RecordPaymentSchema.safeParse(body);
+    if (!parsedPay.success) return validationError(parsedPay.error);
     const amount = Number(body.amount);
     const campaignId = body.campaignId ? String(body.campaignId) : null;
     const memberId = isAdmin(me) && body.memberId ? String(body.memberId) : me.id;
