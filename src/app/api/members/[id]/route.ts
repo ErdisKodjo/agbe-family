@@ -59,12 +59,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "Vous ne pouvez pas supprimer votre propre compte" }, { status: 400 });
     }
 
-    // Désactivation douce : conserve la traçabilité financière
-    await db.member.update({
-      where: { id },
-      data: { isActive: false },
-    });
-    await db.session.deleteMany({ where: { memberId: id } });
+    // Atomique : désactivation douce + révocation immédiate de TOUTES les sessions.
+    // (Corrige le trou ACID : si le deleteMany échouait, le membre désactivé
+    //  gardait des sessions valides → connexion encore possible.)
+    await db.$transaction([
+      db.member.update({
+        where: { id },
+        data: { isActive: false },
+      }),
+      db.session.deleteMany({ where: { memberId: id } }),
+    ]);
     await audit(admin.id, "DELETE", "Member", id, `Retrait du membre ${existing.firstName} ${existing.lastName}`);
     return NextResponse.json({ ok: true });
   } catch (e: any) {
